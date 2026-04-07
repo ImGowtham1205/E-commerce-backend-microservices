@@ -1,4 +1,4 @@
-package com.example.cart_service.jwt;
+package com.example.comment.jwt;
 
 import java.util.Date;
 import java.util.function.Function;
@@ -36,17 +36,7 @@ public class JwtService {
 	public String extractEmail(String token) {
         return extractClaim(token, Claims::getSubject);
     }
-	
-	public String getToken(HttpServletRequest request) {		
-		String auth = request.getHeader("Authorization");
 		
-		if(auth == null || !auth.startsWith("Bearer "))
-			return null;
-		
-		String token = auth.substring(7);
-		return token;
-	}
-	
     private <T> T extractClaim(String token, Function<Claims, T> claimResolver) {
         final Claims claims = extractAllClaims(token);
         return claimResolver.apply(claims);
@@ -76,4 +66,13 @@ public class JwtService {
     	return extractClaim(token, claims -> claims.get("userid",Long.class));
     }
     
+    public String getToken(HttpServletRequest request) {		
+		String auth = request.getHeader("Authorization");
+		
+		if(auth == null || !auth.startsWith("Bearer "))
+			return null;
+		
+		String token = auth.substring(7);
+		return token;
+	}
 }
