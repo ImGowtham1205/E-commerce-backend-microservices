@@ -28,8 +28,8 @@ public class JwtFilter extends OncePerRequestFilter{
 	private final BlackListTokenRepo blacklistrepo;
 	
 	@Override
-	public void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-	        throws ServletException, IOException {
+	public void doFilterInternal(HttpServletRequest request, HttpServletResponse response, 
+			FilterChain filterChain) throws ServletException, IOException {
 
 	    String path = request.getRequestURI();
 
@@ -53,24 +53,18 @@ public class JwtFilter extends OncePerRequestFilter{
 	        email = jwtservice.extractEmail(token);
 	    }
 
-	    // ✅ Authentication setup (optional)
 	    if(email != null && SecurityContextHolder.getContext().getAuthentication()==null) {
 	        UserDetails userdetails = userservice.loadUserByUsername(email);
 
 	        if(jwtservice.validateToken(token,userdetails)) {
 	            UsernamePasswordAuthenticationToken authtoken =
-	                    new UsernamePasswordAuthenticationToken(userdetails, token, userdetails.getAuthorities());
+	                    new UsernamePasswordAuthenticationToken
+	                    	(userdetails, token, userdetails.getAuthorities());
 	            authtoken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 	            SecurityContextHolder.getContext().setAuthentication(authtoken);
 	        }
 	    }
 	    
 	    filterChain.doFilter(request, response);
-
-	    if(token != null && jwtservice.willExpireSoon(token, 5)) {
-	        String newtoken = jwtservice.refreshToken(token);
-	        response.setHeader("X-Auth-Token", "Bearer " + newtoken);
-	    }
 	}
-
 }

@@ -99,22 +99,7 @@ public class JwtService {
     public Date extractExpiration(String token) {
         return extractClaim(token, Claims::getExpiration);
     }
-    
-    // check if token will expire in next N minutes
-    public boolean willExpireSoon(String token, int minutes) {
-        Date expiration = extractExpiration(token);
-        long diff = expiration.getTime() - System.currentTimeMillis();
-        return diff <= minutes * 60 * 1000;
-    }
-
-    // regenerate token using same email
-    public String refreshToken(String token) {
-        String email = extractEmail(token);
-        String role = extractRole(token);
-        long userid = extractUserId(token);
-        return generateToken(email,role,userid);
-    }
-    
+     
     public String extractRole(String token) {
         return extractClaim(token, claims -> claims.get("role", String.class));
     }
