@@ -22,8 +22,8 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class OAuthSuccessHandler implements AuthenticationSuccessHandler{
 
-	private final JwtService jwtservice;
-	private final UsersService userservice;
+	private final JwtService jwtService;
+	private final UsersService userService;
 	
 	private static final String FRONTEND_URL = "http://localhost:5173";
 	
@@ -31,11 +31,11 @@ public class OAuthSuccessHandler implements AuthenticationSuccessHandler{
 	public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
 			Authentication authentication) throws IOException, ServletException {
 		
-		OAuth2User oauthuser = (OAuth2User) authentication.getPrincipal();
-		String email = oauthuser.getAttribute("email");
-		UserCache user = userservice.getUser(email);
+		OAuth2User oauthUser = (OAuth2User) authentication.getPrincipal();
+		String email = oauthUser.getAttribute("email");
+		UserCache user = userService.getUser(email);
 		String role = "ROLE_USER";
-		String token = jwtservice.generateToken(email, role ,user.getId());
+		String token = jwtService.generateToken(email, role ,user.getId());
 		
 		String encodedToken = URLEncoder.encode(token, StandardCharsets.UTF_8);
 		

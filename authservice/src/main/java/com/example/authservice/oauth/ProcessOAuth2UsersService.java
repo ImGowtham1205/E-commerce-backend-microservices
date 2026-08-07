@@ -13,14 +13,14 @@ import com.example.authservice.service.UsersService;
 public class ProcessOAuth2UsersService {
 
 	 private final UsersService userService;
-	 private final OAuthProvidersRepo oauthrepo;
-	 private final MailService mailservice;
+	 private final OAuthProvidersRepo oAuthRepo;
+	 private final MailService mailService;
 	 
 	 public ProcessOAuth2UsersService(UsersService userService,OAuthProvidersRepo oauthrepo,
 			 @Lazy MailService mailservice) {
 		 this.userService = userService;
-		 this.oauthrepo = oauthrepo;
-		 this.mailservice = mailservice;
+		 this.oAuthRepo = oauthrepo;
+		 this.mailService = mailservice;
 	 }
 	
 	 public void processOAuthUsers(String email,String name,String provider,String providerid) {
@@ -39,15 +39,15 @@ public class ProcessOAuth2UsersService {
  			oauthprovider.setProvider(provider);
  			oauthprovider.setProviderid(providerid);
  			oauthprovider.setUserid(saveduser);
- 			oauthrepo.save(oauthprovider);
- 			mailservice.accountCreationMail(saveduser);
+ 			oAuthRepo.save(oauthprovider);
+ 			mailService.accountCreationMail(saveduser);
  		}
          
          else {
  			user.setName(name);
  			userService.saveUser(user);
  			
- 			OAuthProviders existprovider = oauthrepo.findByProviderAndProviderid(provider, providerid);
+ 			OAuthProviders existprovider = oAuthRepo.findByProviderAndProviderid(provider, providerid);
  			if(existprovider == null) {
  				
  				OAuthProviders oauthprovider = new OAuthProviders();
@@ -55,7 +55,7 @@ public class ProcessOAuth2UsersService {
                  oauthprovider.setProviderid(providerid);
                  oauthprovider.setUserid(user);
 
-                 oauthrepo.save(oauthprovider);
+                 oAuthRepo.save(oauthprovider);
  			}
  		}
 	 } 

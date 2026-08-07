@@ -17,7 +17,6 @@ public class TokenService {
 	
 	@CircuitBreaker(name = "AUTHSERVICE", fallbackMethod = "userFallBack")
 	public List<String> getAllBlackListTokens(String token) {
-	    System.out.println("Main method called");
 	    return authService.getallBlackListTokens(token);
 	}
 

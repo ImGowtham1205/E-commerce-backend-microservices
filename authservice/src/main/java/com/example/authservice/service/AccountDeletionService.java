@@ -27,9 +27,9 @@ public class AccountDeletionService {
 			throw new EmailNotExistsException("User not found with email: " + email);
 		
 		if (passwordService.checkCurrentPassword(user, password)) {
-			Users deletedUser = userService.deleteByUserEmail(email);
 			userCleanupService.deleteCart(user.getId(), token);
 			userCleanupService.deleteComment(user.getId(), token);
+			Users deletedUser = userService.deleteByUserEmail(email);
 			blackListTokenService.blackListToken(token);
 			mailService.userAccountDeletionMail(user);
 			return deletedUser;

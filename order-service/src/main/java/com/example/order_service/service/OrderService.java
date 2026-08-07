@@ -68,32 +68,37 @@ public class OrderService {
 	
 	@CacheEvict(value = "orders", key = "'all'") 		
 	public Orders cancelOrder(long orderid) 
-			throws RazorpayException , OrderNotFoundException {
-		
-		Orders order = orderRepo.findById(orderid)
-				.orElseThrow(() -> new OrderNotFoundException("Order not found with id: " + orderid));
-		
-		if ("RAZORPAY".equals(order.getPaymentmethod())) {
+			throws OrderNotFoundException, RazorpayException {
+		try {
+			Orders order = orderRepo.findById(orderid)
+					.orElseThrow(() -> new OrderNotFoundException("Order not found with id: " + orderid));
 			
-			RazorpayClient client = new RazorpayClient(clientId, clientSecret);
-			JSONObject refundReq = new JSONObject();
-			refundReq.put("payment_id", order.getPaymentid());
-			refundReq.put("amount", order.getPrice() * 100);
+			if ("RAZORPAY".equals(order.getPaymentmethod())) {
+				
+				RazorpayClient client = new RazorpayClient(clientId, clientSecret);
+				JSONObject refundReq = new JSONObject();
+				refundReq.put("amount", Math.round(order.getPrice() * 100));
+				System.out.println(order.getPaymentid());
+				Refund refund = client.payments.refund(order.getPaymentid(), refundReq);
+				String refundid = refund.get("id");
+				String status = refund.get("status");
+				order.setPayment_Status("REFUNDED");
+				order.setRefundid(refundid);
+				order.setRefundstatus(status);
+				
+			} else
+				order.setPayment_Status("CANCELLED");
 			
-			Refund refund = client.payments.refund(order.getPaymentid(), refundReq);
-			String refundid = refund.get("id");
-			String status = refund.get("status");
-			order.setPayment_Status("REFUNDED");
-			order.setRefundid(refundid);
-			order.setRefundstatus(status);
-			
-		} else
-			order.setPayment_Status("CANCELLED");
+			order.setOrder_status("CANCELLED");
+			Orders updatedOrder = orderRepo.save(order);
+			cacheManager.getCache("orders").evict("user :" + order.getUserid());
+			return updatedOrder;
+		}catch (RazorpayException e) {
+			e.getMessage();
+		    e.printStackTrace();
+		    throw e;
+		}
 		
-		order.setOrder_status("CANCELLED");
-		Orders updatedOrder = orderRepo.save(order);
-		cacheManager.getCache("orders").evict("user :" + order.getUserid());
-		return updatedOrder;
 	}
 
 	public Orders buildOrder(long productid, UserCache user, String paymentMethod, 

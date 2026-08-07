@@ -17,7 +17,6 @@ public class AuthMicroServiceCall {
 	
 	@CircuitBreaker(name = "AUTHSERVICE" , fallbackMethod = "userFallBack")
 	public List<String> getAllBlackListTokens(String token){
-		System.out.println("Main Method Called");
 		return authservice.getallBlackListTokens(token);
 	}
 	
