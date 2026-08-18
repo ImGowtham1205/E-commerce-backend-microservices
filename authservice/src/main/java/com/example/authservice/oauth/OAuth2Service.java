@@ -11,18 +11,18 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class OAuth2Service extends DefaultOAuth2UserService{
 		
-	private final ProcessOAuth2UsersService oauthuserservice;
+	private final ProcessOAuth2UsersService OAuthUserService;
 	
 	@Override
 	public OAuth2User loadUser(OAuth2UserRequest request) {
-		OAuth2User oauthuser = super.loadUser(request);
+		OAuth2User OAuthUser = super.loadUser(request);
 		String provider = request.getClientRegistration().getRegistrationId().toUpperCase();
-		String email = oauthuser.getAttribute("email");
-		String name = oauthuser.getAttribute("name");
-		String providerid = oauthuser.getName();
+		String email = OAuthUser.getAttribute("email");
+		String name = OAuthUser.getAttribute("name");
+		String providerid = OAuthUser.getName();
 		
-		oauthuserservice.processOAuthUsers(email, name, provider, providerid);
+		OAuthUserService.processOAuthUsers(email, name, provider, providerid);
 		
-		return oauthuser;		
+		return OAuthUser;		
 	}	
 }

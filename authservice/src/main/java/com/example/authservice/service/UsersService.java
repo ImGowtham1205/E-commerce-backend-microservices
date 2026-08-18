@@ -57,10 +57,14 @@ public class UsersService implements UserDetailsService {
     public UserCache getUserById(long id) {
         return usersServiceCache.getUserById(id);
     }
-
+    
     public UserCache getUserByPhoneNo(String phoneno) {
        return usersServiceCache.getUserByPhoneNo(phoneno);
     }
+    
+    public AdminCache getAdminByPhoneNo(String phoneno) {
+        return usersServiceCache.getAdminByPhoneNo(phoneno);
+     }
     
     public UserCache getUser(String email) {
        return usersServiceCache.getUser(email);

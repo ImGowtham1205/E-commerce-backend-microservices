@@ -53,4 +53,8 @@ public class Admins implements Serializable {
 	@OneToMany(mappedBy = "admin",cascade = CascadeType.REMOVE,orphanRemoval = true)
 	@JsonIgnore 
 	private List<AdminPasswordResetToken> token;
+	
+	@OneToMany(mappedBy = "adminid",cascade = CascadeType.REMOVE,orphanRemoval = true)
+	@JsonIgnore 
+	private List<AdminOAuthProviders> OAuthProviders;
 }

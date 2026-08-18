@@ -35,7 +35,7 @@ public class SecurityConfig {
     private final JwtFilter filter;
     private final OAuthSuccessHandler OAuthSuccess;
     private final OAuth2Service OAuthService;
-    private final ProcessOAuth2UsersService oauthUserService;
+    private final ProcessOAuth2UsersService OAuthUserService;
         
     @Bean
     SecurityFilterChain securityChain(HttpSecurity http) throws Exception {
@@ -100,7 +100,7 @@ public class SecurityConfig {
             String provider = userRequest.getClientRegistration().getRegistrationId().toUpperCase();
             String providerid = oidcUser.getSubject();
             
-            oauthUserService.processOAuthUsers(email, name, provider, providerid);
+            OAuthUserService.processOAuthUsers(email, name, provider, providerid);
             
             return oidcUser;
         };

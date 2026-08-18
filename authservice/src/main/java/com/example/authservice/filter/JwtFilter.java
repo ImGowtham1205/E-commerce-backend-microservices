@@ -23,9 +23,9 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class JwtFilter extends OncePerRequestFilter{
 		
-	private final JwtService jwtservice;
-	private final UsersService userservice;
-	private final BlackListTokenService blackListservice;
+	private final JwtService jwtService;
+	private final UsersService userService;
+	private final BlackListTokenService blackListService;
 	
 	@Override
 	public void doFilterInternal(HttpServletRequest request, HttpServletResponse response, 
@@ -45,18 +45,18 @@ public class JwtFilter extends OncePerRequestFilter{
 	    if(authheader != null && authheader.startsWith("Bearer ")) {
 	        token = authheader.substring(7);
 
-	        if (blackListservice.isBlackListed(token)) {
+	        if (blackListService.isBlackListed(token)) {
 	            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Token is invalidated");
 	            return;
 	        }
 
-	        email = jwtservice.extractEmail(token);
+	        email = jwtService.extractEmail(token);
 	    }
 
 	    if(email != null && SecurityContextHolder.getContext().getAuthentication()==null) {
-	        UserDetails userdetails = userservice.loadUserByUsername(email);
+	        UserDetails userdetails = userService.loadUserByUsername(email);
 
-	        if(jwtservice.validateToken(token,userdetails)) {
+	        if(jwtService.validateToken(token,userdetails)) {
 	            UsernamePasswordAuthenticationToken authtoken =
 	                    new UsernamePasswordAuthenticationToken
 	                    	(userdetails, token, userdetails.getAuthorities());

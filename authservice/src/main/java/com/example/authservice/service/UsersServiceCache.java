@@ -34,7 +34,7 @@ public class UsersServiceCache {
         Users user = userRepo.findByPhoneno(phoneno);
         return userCache(user);
     }
-
+      
     @Cacheable(value = "user", key = "'user:' + #email", unless = "#result == null")
     public UserCache getUser(String email) {
         Users user = userRepo.findByEmail(email); 
@@ -92,7 +92,12 @@ public class UsersServiceCache {
         return user;
     }
     
-    @CacheEvict(value = "admin", key = "'admin:' + #result.email")
+    @Caching(
+		evict = {
+			@CacheEvict(value = "admin", key = "'admin:' + #result.email"),
+			@CacheEvict(value = "admin", key = "'admin:' + #result.phoneno")
+		}
+	)
     public Admins deleteByAdminEmail(String email) {
         Admins admin = adminRepo.findByEmail(email);
         if (admin == null)
@@ -100,6 +105,12 @@ public class UsersServiceCache {
         adminRepo.delete(admin);
         return admin;
     }
+    
+    @Cacheable(value = "admin", key = "'admin:' + #phoneno", unless = "#result == null")
+    public AdminCache getAdminByPhoneNo(String phoneno) {
+		Admins admin = adminRepo.findByPhoneno(phoneno);
+		return adminCache(admin);
+	}
     
     public UserCache userCache(Users user) {
     	if (user == null) return null;
@@ -114,5 +125,5 @@ public class UsersServiceCache {
     	return new AdminCache(admin.getId(), admin.getAdminName(), admin.getPhoneno(),
         		admin.getEmail(), admin.getPassword(),admin.getRole());
     }
-	
+
 }

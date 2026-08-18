@@ -9,5 +9,5 @@ import com.example.authservice.model.Admins;
 public interface AdminRepo extends JpaRepository<Admins, Long>{
 	Admins findByEmail(String email);
 	Admins deleteByEmail(String email);
-	boolean existsByEmail(String email);
+	Admins findByPhoneno(String phoneno);
 }

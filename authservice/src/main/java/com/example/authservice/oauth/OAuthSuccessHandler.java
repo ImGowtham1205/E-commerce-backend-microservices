@@ -9,6 +9,7 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Service;
 
+import com.example.authservice.model.AdminCache;
 import com.example.authservice.model.UserCache;
 import com.example.authservice.service.JwtService;
 import com.example.authservice.service.UsersService;
@@ -34,8 +35,19 @@ public class OAuthSuccessHandler implements AuthenticationSuccessHandler{
 		OAuth2User oauthUser = (OAuth2User) authentication.getPrincipal();
 		String email = oauthUser.getAttribute("email");
 		UserCache user = userService.getUser(email);
-		String role = "ROLE_USER";
-		String token = jwtService.generateToken(email, role ,user.getId());
+		String role = "ROLE_";
+		long id = 0;
+		if(user == null) {
+			AdminCache admin = userService.getAdmin(email);
+			role += admin.getRole().toUpperCase();
+			id = admin.getId();
+		}
+		else {
+			role += user.getRole().toUpperCase();
+			id = user.getId();
+		}
+		
+		String token = jwtService.generateToken(email, role ,id);
 		
 		String encodedToken = URLEncoder.encode(token, StandardCharsets.UTF_8);
 		
