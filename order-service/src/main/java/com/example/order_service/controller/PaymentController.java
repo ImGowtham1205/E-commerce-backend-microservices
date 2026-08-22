@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.order_service.jwt.JwtService;
 import com.example.order_service.service.PaymentService;
 import com.razorpay.RazorpayException;
 
@@ -17,11 +18,12 @@ import lombok.AllArgsConstructor;
 public class PaymentController {
 	
 	private final PaymentService paymentService;
-
+	private final JwtService jwtService;
+	
     @PostMapping("/api/user/create")
     public Map<String, String> createOrder(@RequestBody Map<String,Object> data
     		,HttpServletRequest request) throws RazorpayException  {
-    	String token = request.getHeader("Authorization");
+    	String token = jwtService.getToken(request);
     	double amount = Double.parseDouble(data.get("amount").toString());
     	return paymentService.createOrder(amount,token);
     }

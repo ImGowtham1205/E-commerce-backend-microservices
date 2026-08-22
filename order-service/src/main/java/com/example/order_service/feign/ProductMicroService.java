@@ -1,6 +1,7 @@
 package com.example.order_service.feign;
 
 import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -16,5 +17,6 @@ public interface ProductMicroService {
 	public Products fetchProductById(@PathVariable long id);
 	
 	@PutMapping("/api/updatestock")
-	public void updateStock(@RequestBody Products product);
+	public ResponseEntity<String> updateStock(@RequestBody Products product);
+	
 }

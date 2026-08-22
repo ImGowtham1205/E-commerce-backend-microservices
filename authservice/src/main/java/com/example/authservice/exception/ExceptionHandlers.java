@@ -33,4 +33,10 @@ public class ExceptionHandlers {
 				.body(ex.getMessage());
 	}
 	
+	@ExceptionHandler(MailNotSentException.class)
+	public ResponseEntity<String> mailNotSentException(MailNotSentException ex){
+		return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+				.body(ex.getMessage());
+	}
+	
 }

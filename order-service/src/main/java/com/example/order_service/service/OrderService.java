@@ -22,6 +22,8 @@ import com.razorpay.RazorpayClient;
 import com.razorpay.RazorpayException;
 import com.razorpay.Refund;
 
+import jakarta.servlet.http.HttpServletRequest;
+
 @Service
 public class OrderService {
 
@@ -29,13 +31,16 @@ public class OrderService {
 	private final MailService mailService;
 	private final ProductMicroService productService;
 	private final CacheManager cacheManager;
+	private final AuthMicroServiceCall authService;
 	
 	public OrderService(OrdersRepo orderRepo, MailService mailService, 
-			ProductMicroService productService ,CacheManager cacheManager) {
+			ProductMicroService productService ,CacheManager cacheManager , 
+				AuthMicroServiceCall authService) {
 		this.orderRepo = orderRepo;
 		this.mailService = mailService;
 		this.productService = productService;
 		this.cacheManager = cacheManager;
+		this.authService = authService;
 	}
 
 	@Value("${razorpay.client.id}")
@@ -56,9 +61,9 @@ public class OrderService {
 		return savedOrder;
 	}
 
-	@Cacheable(value = "orders", key = "'user :' + #user.id")
-	public List<Orders> fetchOrderByUser(UserCache user) {
-		return orderRepo.findByUserid(user.getId());
+	@Cacheable(value = "orders", key = "'user :' + #userId")
+	public List<Orders> fetchOrderByUser(long userId) {
+		return orderRepo.findByUserid(userId);
 	}
 
 	@Cacheable(value = "orders", key = "'all'")
@@ -67,18 +72,20 @@ public class OrderService {
 	}
 	
 	@CacheEvict(value = "orders", key = "'all'") 		
-	public Orders cancelOrder(long orderid) 
+	public Orders cancelOrder(long orderid , HttpServletRequest request) 
 			throws OrderNotFoundException, RazorpayException {
 		try {
 			Orders order = orderRepo.findById(orderid)
 					.orElseThrow(() -> new OrderNotFoundException("Order not found with id: " + orderid));
+			
+			UserCache user = fetchUser(request);
+			Products product = productService.fetchProductById(order.getProductid());
 			
 			if ("RAZORPAY".equals(order.getPaymentmethod())) {
 				
 				RazorpayClient client = new RazorpayClient(clientId, clientSecret);
 				JSONObject refundReq = new JSONObject();
 				refundReq.put("amount", Math.round(order.getPrice() * 100));
-				System.out.println(order.getPaymentid());
 				Refund refund = client.payments.refund(order.getPaymentid(), refundReq);
 				String refundid = refund.get("id");
 				String status = refund.get("status");
@@ -92,6 +99,7 @@ public class OrderService {
 			order.setOrder_status("CANCELLED");
 			Orders updatedOrder = orderRepo.save(order);
 			cacheManager.getCache("orders").evict("user :" + order.getUserid());
+			mailService.orderCancellationMail(product, user, order);
 			return updatedOrder;
 		}catch (RazorpayException e) {
 			e.getMessage();
@@ -121,4 +129,10 @@ public class OrderService {
 
 		return order;
 	}
+	
+	public UserCache fetchUser(HttpServletRequest request) {
+		String token = request.getHeader("Authorization");
+		return authService.userInfo(token);
+	}
+	
 }

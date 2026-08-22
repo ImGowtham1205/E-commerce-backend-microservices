@@ -53,7 +53,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
             String email = jwtService.extractEmail(token);
             String role = jwtService.extractRole(token);
-           
+            
             SimpleGrantedAuthority authority =
                     new SimpleGrantedAuthority(role);
 

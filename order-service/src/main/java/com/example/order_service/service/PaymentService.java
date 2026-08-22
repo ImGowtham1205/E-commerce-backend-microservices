@@ -7,6 +7,7 @@ import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import com.example.order_service.jwt.JwtService;
 import com.example.order_service.model.Orders;
 import com.example.order_service.model.Products;
 import com.example.order_service.model.UserCache;
@@ -20,12 +21,14 @@ public class PaymentService {
 
 	private final OrderService orderService;
 	private final ProductMicroServiceCall productService;
+	private final JwtService jwtService;
 	private final AuthMicroServiceCall authService;
-
+	
 	public PaymentService(OrderService orderService,ProductMicroServiceCall productService,
-			AuthMicroServiceCall authService) {
+			JwtService jwtService,AuthMicroServiceCall authService) {
 		this.orderService = orderService;
 		this.productService = productService;
+		this.jwtService = jwtService;
 		this.authService = authService;
 	}
 
@@ -36,8 +39,7 @@ public class PaymentService {
 
 	public Map<String, String> createOrder(double amonut,String token) throws RazorpayException {
 
-		UserCache user = authService.userInfo(token);
-		String email = user.getEmail();
+		String email = jwtService.extractEmail(token);
 
 		RazorpayClient client = new RazorpayClient(clientid, clientsecret);
 

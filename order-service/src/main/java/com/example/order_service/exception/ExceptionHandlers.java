@@ -22,4 +22,10 @@ public class ExceptionHandlers {
 				.body(ex.getMessage());
 	}
 	
+	@ExceptionHandler(MailNotSentException.class)
+	public ResponseEntity<String> mailNotSentException(MailNotSentException ex){
+		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+				.body(ex.getMessage());
+	}
+	
 }

@@ -27,6 +27,7 @@ public class RegistrationService {
 	
 	public void registerAdmin(Admins admin) {
 		userService.saveAdmin(admin);
+		mailService.accountCreationMail(admin);
 	}
 	
 	public boolean existsMailForUser(String mail) {

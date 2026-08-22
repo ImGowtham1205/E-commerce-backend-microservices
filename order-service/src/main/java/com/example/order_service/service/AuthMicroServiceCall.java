@@ -27,13 +27,13 @@ public class AuthMicroServiceCall {
 	}
 	
 	public List<String> userFallBack(String token,Throwable t) {
-		System.out.println("Unable To Call The AUTHSERVICE At This Time");
+		System.err.println("Unable To Call The AUTHSERVICE At This Time , Reason : " + t.getMessage());
 		return List.of();
 	}
 	
 	public UserCache userInfoFallBack(String token,Throwable t) {
 		UserCache user = new UserCache();
-		System.out.println("Unable To Call The AUTHSERVICE At This Time");
+		System.out.println("Unable To Call The AUTHSERVICE At This Time , Reason : " + t.getMessage());
 		return user;
 	}
 	

@@ -2,7 +2,6 @@ package com.example.authservice.configuration;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -67,11 +66,6 @@ public class SecurityConfig {
     @Bean
     PasswordEncoder encorder() {
         return new BCryptPasswordEncoder(12);
-    }
-
-    @Bean
-    SimpleMailMessage mailMessage() {
-        return new SimpleMailMessage();
     }
 
     @Bean

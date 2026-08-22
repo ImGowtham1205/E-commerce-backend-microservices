@@ -12,6 +12,7 @@ import com.example.comment.model.Comment;
 public interface CommentRepo extends MongoRepository<Comment, ObjectId>{
 	 long countByProductid(long productid);
 	 List<Comment> findByProductid(long prductid);
-	 void deleteByUserid(Long userid);
-	 void deleteByproductid(Long productid);
+	 void deleteByUserid(long userid);
+	 void deleteByproductid(long productid);
+	 List<Comment> findByUserid(long userid);
 }

@@ -33,32 +33,32 @@ public class ProductController {
 	@PostMapping("/admin/addproduct")
 	public ResponseEntity<String> addProducts(@RequestPart Products product,
 			@RequestPart MultipartFile file) throws IOException{
-		
 			product.setImagename(file.getOriginalFilename());
 			product.setImagetype(file.getContentType());
 			product.setImagedata(file.getBytes());
 			productService.addProduct(product);
-			return ResponseEntity.status(HttpStatus.OK).body("Product added successfully");
+			
+			return ResponseEntity.status(HttpStatus.OK).body("Product Added Successfully");
 	}
 	
 	@PutMapping("/admin/updateproduct")
 	public ResponseEntity<String> updateProduct(@RequestPart Products product , 
 			@RequestPart(required = false) MultipartFile file) throws IOException{
-		
 			if(file != null && !file.isEmpty()) {
 				product.setImagename(file.getOriginalFilename());
 				product.setImagetype(file.getContentType());
 				product.setImagedata(file.getBytes());
 			}			
+			
 			productService.updateProduct(product);
 			
-			return ResponseEntity.status(HttpStatus.OK).body("Product updated successfully");
+			return ResponseEntity.status(HttpStatus.OK).body("Product Updated Successfully");
 	}
 	
 	@DeleteMapping("/admin/deleteproduct/{id}")
 	public ResponseEntity<String> deleteProduct(@PathVariable long id){
 		productService.deleteProduct(id);
-		return ResponseEntity.status(HttpStatus.OK).body("Product deleted successfully");
+		return ResponseEntity.status(HttpStatus.OK).body("Product Deleted Successfully");
 	}
 	
 	@GetMapping("/products/{category}")
@@ -86,7 +86,8 @@ public class ProductController {
 	}
 	
 	@PutMapping("/updatestock")
-	public void updateStock(@RequestBody Products product) {
+	public ResponseEntity<String> updateStock(@RequestBody Products product) {
 		productService.updateProduct(product);
+		return ResponseEntity.ok("Stock Updated Successfully for Product ID : " + product.getId());
 	}
 }

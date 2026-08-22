@@ -13,6 +13,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
+import jakarta.servlet.http.HttpServletRequest;
 
 @Service
 public class JwtService {
@@ -50,7 +51,7 @@ public class JwtService {
     }
     
     public boolean validateToken(String token) {
-        return !extractAllClaims(token).getExpiration().before(new java.util.Date());
+        return !extractAllClaims(token).getExpiration().before(new Date());
     }
     
     public Date extractExpiration(String token) {
@@ -64,5 +65,15 @@ public class JwtService {
     public long extractUserId(String token) {
     	return extractClaim(token, claims -> claims.get("userid",Long.class));
     }
+    
+    public String getToken(HttpServletRequest request) {		
+		String auth = request.getHeader("Authorization");
+		
+		if(auth == null || !auth.startsWith("Bearer "))
+			return null;
+		
+		String token = auth.substring(7);
+		return token;
+	}
     
 }

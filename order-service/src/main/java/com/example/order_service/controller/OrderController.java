@@ -12,10 +12,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.order_service.exception.OrderNotFoundException;
+import com.example.order_service.jwt.JwtService;
 import com.example.order_service.model.Orders;
 import com.example.order_service.model.Products;
 import com.example.order_service.model.UserCache;
-import com.example.order_service.service.AuthMicroServiceCall;
 import com.example.order_service.service.OrderService;
 import com.example.order_service.service.ProductMicroServiceCall;
 import com.razorpay.RazorpayException;
@@ -27,18 +27,17 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class OrderController {
 	
-	private final AuthMicroServiceCall authService;
 	private final OrderService orderService;
 	private final ProductMicroServiceCall productService;
-		
+	private final JwtService jwtService;
+	
 	@PostMapping("/api/user/purchase/{productid}")
 	public ResponseEntity<String> purchaseProduct(@PathVariable long productid,
 			@RequestBody Map<String,Object> body,HttpServletRequest request){
 		
 		String paymentMethod = body.get("paymentmethod").toString();
 		
-		String token = request.getHeader("Authorization");
-		UserCache user = authService.userInfo(token);
+		UserCache user = orderService.fetchUser(request);
 		
 		Products product = productService.fetchProductById(productid);
 
@@ -53,9 +52,9 @@ public class OrderController {
 	
 	@GetMapping("/api/user/fetchorder")
 	public List<Orders> fetchOrder(HttpServletRequest request){
-		String token = request.getHeader("Authorization");
-		UserCache user = authService.userInfo(token);
-		List<Orders> userorder = orderService.fetchOrderByUser(user);
+		String token = jwtService.getToken(request);
+		long userId = jwtService.extractUserId(token);
+		List<Orders> userorder = orderService.fetchOrderByUser(userId);
 		return userorder;
 	}
 	
@@ -65,9 +64,9 @@ public class OrderController {
 	}
 	
 	@DeleteMapping("/api/user/cancelorder/{orderid}")
-	public ResponseEntity<String> cancelOrder(@PathVariable long orderid) 
+	public ResponseEntity<String> cancelOrder(@PathVariable long orderid , HttpServletRequest request) 
 			throws RazorpayException , OrderNotFoundException{
-		orderService.cancelOrder(orderid);
+		orderService.cancelOrder(orderid , request);
 		return ResponseEntity.ok("Order cancelled successfully");
 	}
 }

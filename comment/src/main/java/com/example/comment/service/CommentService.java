@@ -3,6 +3,8 @@ package com.example.comment.service;
 import java.util.List;
 
 import org.bson.types.ObjectId;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
@@ -19,6 +21,7 @@ import lombok.AllArgsConstructor;
 public class CommentService {
 	
 	private final CommentRepo commentRepo;
+	private final CacheManager cacheManager;
 	
 	@Cacheable(value = "comment" , key = "'cmtcount:' + #productid" , unless = "#result == null")
 	public long getCommentCountForProduct(long productid) {
@@ -66,13 +69,24 @@ public class CommentService {
 		commentRepo.deleteByproductid(productid);
 	}
 	
-	public void deleteUserComments(long userid) {
+	public void deleteUserComments(long userid) throws Exception {
+		List<Comment> userComments = commentRepo.findByUserid(userid);
 		commentRepo.deleteByUserid(userid);
+		userComments.forEach(cmt -> evictCommentCache(cmt.getProductid()));
 	}
 	
 	public Comment fetchCommentById(ObjectId id) {
 		return commentRepo.findById(id)
-				.orElseThrow(()-> new CommentNotFoundException("Comment Not Found.Unable To Delete"));
+				.orElseThrow(()-> new CommentNotFoundException("Comment Not Found . Unable To Delete"));
+	}
+	
+	private void evictCommentCache(long productid) {
+		Cache cache = cacheManager.getCache("comment");
+		
+		if(cache != null) {
+			cache.evict("productcmt:" + productid);
+			cache.evict("cmtcount:" + productid);
+		}
 	}
 	
 }

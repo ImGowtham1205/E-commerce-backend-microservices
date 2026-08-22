@@ -33,7 +33,7 @@ public class CartController {
 		long userid = jwtService.extractUserId(token);
 		cart.setUserId(userid);
 		cartService.addCart(cart);
-		return ResponseEntity.ok("Product added to cart successfully");
+		return ResponseEntity.ok("Product Added To Cart Successfully");
 	}	
 	
 	@GetMapping("/api/user/getcartitem")
@@ -50,23 +50,25 @@ public class CartController {
 		ObjectId objectid = new ObjectId(id);
 		Cart deleteItem = cartService.findByObjectId(objectid);
 		cartService.deleteCartItemById(deleteItem);	
-		return ResponseEntity.ok("Product removed from your cart successfully");
+		return ResponseEntity.ok("Product Removed From Your Cart Successfully");
 	}
 	
 	@PutMapping("/api/user/updatequantity")
 	public ResponseEntity<String> updateQuantity(@RequestBody Cart cart){
 		cart.setQuantity(cart.getQuantity());
 		cartService.updateQuantity(cart);
-		return ResponseEntity.ok("Product quantity successfully updated to your cart");
+		return ResponseEntity.ok("Product Quantity Successfully Updated To Your Cart");
 	}
 	
 	@DeleteMapping("/api/user/deleteusercart/{userid}")
-	public void deleteUserCartItems(@PathVariable long userid) {
+	public ResponseEntity<String> deleteUserCartItems(@PathVariable long userid) throws Exception {
 		cartService.deleteUserCartItems(userid);
+		return ResponseEntity.ok("User Cart Record Deleted Successfully For UserID : " + userid);
 	}
 	
 	@DeleteMapping("/api/admin/deletecartbyproductid/{productid}")
-	public void deleteCartItemsByProductId(@PathVariable long productid) {
+	public ResponseEntity<String> deleteCartItemsByProductId(@PathVariable long productid) throws Exception {
 		cartService.deleteCartItemsByProductId(productid);
+		return ResponseEntity.ok("Cart Record Deleted Successfully For Product ID : " + productid);
 	}
 }

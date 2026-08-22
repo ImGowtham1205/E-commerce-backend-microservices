@@ -57,12 +57,12 @@ public class CartService {
 	}
 	
 	@CacheEvict(value = "cart", key = "'usercart:' + #userid")
-	public void deleteUserCartItems(long userid) {
+	public void deleteUserCartItems(long userid) throws Exception {
 		cartRepo.deleteByUserId(userid);
 	}
 	
 	@CacheEvict(value = "cart", allEntries = true)
-	public void deleteCartItemsByProductId(long productid) {
+	public void deleteCartItemsByProductId(long productid) throws Exception {
 		cartRepo.deleteByProductId(productid);
 	}
 }

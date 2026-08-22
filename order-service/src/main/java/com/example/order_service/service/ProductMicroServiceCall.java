@@ -1,7 +1,9 @@
 package com.example.order_service.service;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import com.example.order_service.exception.ProductStockUpdationException;
 import com.example.order_service.feign.ProductMicroService;
 import com.example.order_service.model.Products;
 
@@ -21,17 +23,24 @@ public class ProductMicroServiceCall {
 	
 	@CircuitBreaker(name = "product-service" , fallbackMethod = "updateStockFallBack")
 	public void updateStock(Products product) {
-		productService.updateStock(product);
+		 ResponseEntity<String> response = productService.updateStock(product);
+		 
+		 if(!response.getStatusCode().is2xxSuccessful())
+			 throw new ProductStockUpdationException
+			 	("Unable To Update Product Stock For ProductID : " + product.getId());
+		 
 	}
 	
-	public Products fetchProductByIdFallBack(long id , Throwable t) {
+	public Products fetchProductByIdFallBack(long id , Exception ex) {
+		ex.getStackTrace();
 		Products product = new Products();
-		System.out.println("Unable To Fetch The Product At This Time");
+		System.err.println("Unable To Fetch Product Information For ProductID : " + id);
 		return product;
 	}
 	
-	public void updateStockFallBack(Products product , Throwable t) {
-		System.out.println("Unable To Update The Product Stock At This Time");
+	public void updateStockFallBack(Products product , Exception ex) {
+		ex.getStackTrace();
+		System.err.println("Unable To Update Product Stock For ProductID : " + product.getId());
 	}
 	
 }

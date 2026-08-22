@@ -1,7 +1,10 @@
 package com.example.product_service.service;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import com.example.product_service.exception.CartRecordDeletionException;
+import com.example.product_service.exception.CommentRecordDeletionException;
 import com.example.product_service.feign.CartMicroService;
 import com.example.product_service.feign.CommentMicroService;
 
@@ -17,20 +20,30 @@ public class ProductCleanupService {
 
 	@CircuitBreaker(name = "CART-SERVICE" , fallbackMethod = "cartFallBack")
 	public void deleteCart(long productid) {
-		cartService.deleteCartItemsByProductId(productid);
+		ResponseEntity<String> response = cartService.deleteCartItemsByProductId(productid);
+		
+		if(!response.getStatusCode().is2xxSuccessful()) 
+			throw new CartRecordDeletionException
+				("Failed to Delete Cart Item For ProductID : " + productid);
+		
 	}
 	
 	@CircuitBreaker(name = "COMMENT" , fallbackMethod = "commentFallBack")
 	public void deleteComment(long productid) {
-		commentService.deleteCommentsByProductId(productid);
+		ResponseEntity<String> response = commentService.deleteCommentsByProductId(productid);
+		
+		if(!response.getStatusCode().is2xxSuccessful()) 
+			throw new CommentRecordDeletionException
+				("Failed to Delete Comment Records For ProductID : " + productid);
+		
 	}
 
-	public void cartFallBack(long productid, Throwable t) {
-		System.out.println("Cart Service unavailable for productId = " + productid + ", reason: " + t.getMessage());
+	public void cartFallBack(long productid, Exception ex) {
+		System.err.println("Cart Service unavailable for productId = " + productid + ", reason: " + ex.getMessage());
 	}
 
-	public void commentFallBack(long productid, Throwable t) {
-		System.out.println("Comment Service unavailable for productId = " + productid + ", reason: " + t.getMessage());
+	public void commentFallBack(long productid, Exception ex) {
+		System.err.println("Comment Service unavailable for productId = " + productid + ", reason: " + ex.getMessage());
 	}
 	
 }

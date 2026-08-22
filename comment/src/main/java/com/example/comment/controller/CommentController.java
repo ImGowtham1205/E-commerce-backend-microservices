@@ -36,7 +36,7 @@ public class CommentController {
 		UserCache user = userService.userInfo(token);
 		cmt.setUsername(user.getName());
 		commentService.addComment(cmt);
-		return ResponseEntity.ok("Comment added successfully");
+		return ResponseEntity.ok("Comment Added Successfully");
 	}
 	
 	@PutMapping("/api/user/updatecomment")
@@ -46,7 +46,7 @@ public class CommentController {
 		cmt.setUsername(user.getName());
 		cmt.setReview(cmt.getReview());
 		commentService.updateComment(cmt);
-		return ResponseEntity.ok("Comment updated successfully");
+		return ResponseEntity.ok("Comment Updated Successfully");
 	}
 	
 	@DeleteMapping("/api/user/deletecomment/{id}")
@@ -55,7 +55,7 @@ public class CommentController {
 		ObjectId objectid = new ObjectId(id);
 		Comment deleteItem = commentService.fetchCommentById(objectid);
 		commentService.deleteComment(deleteItem);
-		return ResponseEntity.ok("Comment deleted successfully");
+		return ResponseEntity.ok("Comment Deleted Successfully");
 	}
 	
 	@GetMapping("/api/user/commentcount/{productid}")
@@ -77,12 +77,17 @@ public class CommentController {
 	}
 	
 	@DeleteMapping("/api/user/deleteusercomments/{userid}")
-	public void deleteUserCartItems(@PathVariable long userid) {
+	public ResponseEntity<String> deleteUserComments(@PathVariable long userid) throws Exception {
 		commentService.deleteUserComments(userid);
+		return ResponseEntity.ok("User Comment Record Deleted Successfully For UserID : " + userid);
 	}
 	
 	@DeleteMapping("/api/admin/deleteproductcomment/{productid}")
-	public void deleteCommentsByProductId(@PathVariable long productid) {
-		commentService.deleteproductComments(productid);
+	public ResponseEntity<String> deleteCommentsByProductId
+		(@PathVariable long productid) throws Exception {
+			commentService.deleteproductComments(productid);
+			return ResponseEntity
+					.ok("User Comment Record Deleted Successfully For ProductID : " + productid);
 	}	
+	
 }
