@@ -1,7 +1,7 @@
 package com.example.product_service.repository;
 
-import java.util.List;
-
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -11,7 +11,7 @@ import com.example.product_service.projection.ProductView;
 
 @Repository
 public interface ProductRepo extends JpaRepository<Products, Long>{
-	List<ProductView> findByCategory(String category);
+	Page<ProductView> findByCategory(String category , Pageable page);
 	@Query("""
 	        SELECT p.id AS id,
 	               p.productname AS productname,
@@ -21,5 +21,6 @@ public interface ProductRepo extends JpaRepository<Products, Long>{
 	               p.category AS category
 	        FROM Products p
 	    """)
-	List<ProductView> findAllProducts();
+	Page<ProductView> findAllProducts(Pageable page);
+	long countByCategory(String category);
 }

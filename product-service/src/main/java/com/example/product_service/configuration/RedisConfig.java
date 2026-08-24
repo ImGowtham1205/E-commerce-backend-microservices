@@ -25,16 +25,17 @@ public class RedisConfig {
                         BasicPolymorphicTypeValidator.builder()
                                 .allowIfBaseType(Object.class)
                                 .build(),
-                        DefaultTyping.NON_FINAL,"@class").build();
+                        DefaultTyping.NON_FINAL, "@class")
+                .build();
 
         GenericJacksonJsonRedisSerializer serializer =
                 new GenericJacksonJsonRedisSerializer(mapper);
 
         RedisCacheConfiguration config =
                 RedisCacheConfiguration.defaultCacheConfig()
-                		.entryTtl(Duration.ofMinutes(10))
-                        .serializeValuesWith
-                        		(RedisSerializationContext.SerializationPair
+                        .entryTtl(Duration.ofMinutes(10))
+                        .serializeValuesWith(
+                                RedisSerializationContext.SerializationPair
                                         .fromSerializer(serializer));
 
         return RedisCacheManager.builder(connectionFactory)
