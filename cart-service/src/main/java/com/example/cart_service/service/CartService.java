@@ -5,11 +5,14 @@ import java.util.List;
 import org.bson.types.ObjectId;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.cache.annotation.Caching;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import com.example.cart_service.exception.CartItemNotFoundException;
 import com.example.cart_service.model.Cart;
+import com.example.cart_service.model.Products;
 import com.example.cart_service.repository.CartRepo;
 
 import lombok.AllArgsConstructor;
@@ -19,44 +22,36 @@ import lombok.AllArgsConstructor;
 public class CartService {
 	
 	private final CartRepo cartRepo;
+	private final CartCacheService cartcacheService;
+	private final ProductService productService;
 	
-	@CacheEvict(value = "cart" , key = "'usercart:' +#cart.userId")
+	@CacheEvict(value = "cart" , allEntries = true)
 	public Cart addCart(Cart cart){
 		return cartRepo.save(cart);
 	}
 	
-	@Cacheable(value = "cart" , key = "'usercart:' +#userid" , unless = "#result == null")
-	public List<Cart> fetchCartProduct(long userid){
-		return cartRepo.findByUserId(userid);
+	public Page<Cart> fetchCartProduct(long userid , int page , int size){
+		List<Cart> content = cartcacheService.fetchCartProductList(userid , page , size);
+		long total = cartcacheService.countUserCart(userid);
+		return new PageImpl<>(content, PageRequest.of(page, size), total);
 	}
 	
-	@Caching(
-			evict ={
-			   @CacheEvict(value = "cart" , key = "'usercart:' +#cart.userId"),
-			   @CacheEvict(value = "cart" , key = "'usercart:' +#cart.id")
-			   
-			}
-    )
+	@CacheEvict(value = "cart" , allEntries = true)
 	public void deleteCartItemById(Cart cart){
 		cartRepo.deleteById(cart.getId());
 	}
 	
-	@Caching(evict = {
-		    @CacheEvict(value = "cart", key = "'usercart:' + #cart.userId"),
-		    @CacheEvict(value = "cart", key = "'usercart:' + #cart.id")
-		})
-
+	@CacheEvict(value = "cart" , allEntries = true)
 	public Cart updateQuantity(Cart cart) {
 		return cartRepo.save(cart);
 	}
 	
-	@Cacheable(value = "cart" , key = "'usercart:' +#id" , unless = "#result == null")
 	public Cart findByObjectId(ObjectId id) throws CartItemNotFoundException {
 		return cartRepo.findById(id)
 				.orElseThrow(() -> new CartItemNotFoundException("Cart item not found with id: " + id));
 	}
 	
-	@CacheEvict(value = "cart", key = "'usercart:' + #userid")
+	@CacheEvict(value = "cart" , allEntries = true)
 	public void deleteUserCartItems(long userid) throws Exception {
 		cartRepo.deleteByUserId(userid);
 	}
@@ -64,5 +59,16 @@ public class CartService {
 	@CacheEvict(value = "cart", allEntries = true)
 	public void deleteCartItemsByProductId(long productid) throws Exception {
 		cartRepo.deleteByProductId(productid);
+	}
+	
+	@Cacheable(value = "cart" , key = "'usercart: ' + #userid + ':totalprice: ' + #result")
+	public Double getCartTotal(long userid) {
+		return cartRepo.findByUserId(userid)
+				.stream()
+				.filter(cart -> cart.getQuantity() != 0)
+				.mapToDouble(cart -> {
+					Products product = productService.fetchProductById(cart.getProductId());
+					return product.getPrice() * cart.getQuantity();
+				}).sum();
 	}
 }
