@@ -1,5 +1,17 @@
 package com.example.MailService.model;
 
-public record AdminForgotPasswordRequest(Admins admin, String token) {
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+public class AdminForgotPasswordRequest {
+	
+	private String token;
+	private Admins admin;
+	
 }

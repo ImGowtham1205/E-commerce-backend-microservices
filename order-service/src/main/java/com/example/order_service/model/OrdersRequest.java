@@ -1,5 +1,18 @@
 package com.example.order_service.model;
 
-public record OrdersRequest(Products product, UserCache user, Orders order) {
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+public class OrdersRequest {
+	
+	private Products product;
+	private UserCache user; 
+	private Orders order;
+	
 }

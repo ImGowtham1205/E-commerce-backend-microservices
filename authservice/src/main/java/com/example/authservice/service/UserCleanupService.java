@@ -1,51 +1,38 @@
 package com.example.authservice.service;
 
-import org.springframework.http.ResponseEntity;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import com.example.authservice.exception.CartRecordDeletionException;
 import com.example.authservice.exception.CommentRecordDeletionException;
-import com.example.authservice.feign.CartMicroService;
-import com.example.authservice.feign.CommentMicroService;
 
-import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.AllArgsConstructor;
 
 @Service
 @AllArgsConstructor
 public class UserCleanupService {
 
-	private final CartMicroService cartService;
-	private final CommentMicroService commentService;
-
-	@CircuitBreaker(name = "CART-SERVICE" , fallbackMethod = "cartFallback")
-	public void deleteCart(long userid, String token) {
-		ResponseEntity<String> response = cartService.deleteUserCartItems(userid, "Bearer " + token);
-		
-		if(!response.getStatusCode().is2xxSuccessful()) 
-			throw new CartRecordDeletionException
-				("Failed to Delete Cart Item For UserID : " + userid);
-		
+	private final KafkaTemplate<Long, Object> kafkaTemplate;
+	
+	public void deleteCart(long userid) {
+		 kafkaTemplate.send("user.deleted", userid, userid).whenComplete((result,ex) -> {
+			 if(ex != null)
+				 throw new CartRecordDeletionException("Failed To Send User Account Deleted Event To "
+				 		+ "CartService : " + ex.getMessage());
+				else
+					System.out.println("User Deleted Created Event Is Actually Delivered To CartService "
+							+ "Partition : " + result.getRecordMetadata().partition());
+		 });
 	}
 	
-	@CircuitBreaker(name = "COMMENT" , fallbackMethod = "commentFallback")
-	public void deleteComment(long userid, String token) {
-		ResponseEntity<String> response = commentService.deleteUserComments(userid, "Bearer " + token);
-		
-		if(!response.getStatusCode().is2xxSuccessful()) 
-			throw new CommentRecordDeletionException
-				("Failed to Delete Comment Record For UserID : " + userid);
-		
+	public void deleteComment(long userid) {
+		kafkaTemplate.send("user.deleted", userid, userid).whenComplete((result,ex) -> {
+			if(ex != null)
+				throw new CommentRecordDeletionException("Failed To Send User Deleted Created Event To "
+						+ "CommentService : " + ex.getMessage());
+			else
+				System.out.println("User Account Created Event Is Actually Delivered To CommentService "
+						+ "Partition : " + result.getRecordMetadata().partition());
+		});
 	}
-
-	public void cartFallback(long userId, String token, Exception ex) {
-		ex.getStackTrace();
-		System.err.println("Cart Service unavailable for userId = " + userId);
-	}
-
-	public void commentFallback(long userId, String token, Exception ex) {
-		ex.getStackTrace();
-		System.err.println("Comment Service unavailable for userId = " + userId);
-	}
-	
 }

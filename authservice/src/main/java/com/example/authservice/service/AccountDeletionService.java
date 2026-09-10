@@ -27,15 +27,15 @@ public class AccountDeletionService {
 			throw new EmailNotExistsException("User not found with email: " + email);
 		
 		if (passwordService.checkCurrentPassword(user, password)) {
-			userCleanupService.deleteCart(user.getId(), token);
-			userCleanupService.deleteComment(user.getId(), token);
+			userCleanupService.deleteCart(user.getId());
+			userCleanupService.deleteComment(user.getId());
 			Users deletedUser = userService.deleteByUserEmail(email);
 			blackListTokenService.blackListToken(token);
 			mailService.userAccountDeletionMail(user);
 			return deletedUser;
 			
 		} else
-			throw new PasswordNotMatchException("Current Password doesn't match");
+			throw new PasswordNotMatchException("Current Password Doesn't Match");
 	}
 
 	@Transactional
@@ -51,6 +51,6 @@ public class AccountDeletionService {
 			return deletedAdmin;
 			
 		} else
-			throw new PasswordNotMatchException("Current Password doesn't match");
+			throw new PasswordNotMatchException("Current Password Doesn't Match");
 	}
 }

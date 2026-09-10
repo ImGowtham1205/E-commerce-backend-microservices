@@ -1,107 +1,91 @@
 package com.example.authservice.service;
 
-import org.springframework.http.ResponseEntity;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
-import com.example.authservice.exception.MailNotSentException;
-import com.example.authservice.feign.MailMicroService;
 import com.example.authservice.model.AdminForgotPasswordRequest;
 import com.example.authservice.model.Admins;
 import com.example.authservice.model.UserForgotPasswordRequest;
 import com.example.authservice.model.Users;
 
-import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.AllArgsConstructor;
 
 @Service
 @AllArgsConstructor
 public class MailService {
 	
-	private final MailMicroService mailMicroService;
-	
-	@CircuitBreaker(name = "MailService" , fallbackMethod = "accountcreationMailFallback")
+	private final KafkaTemplate<Long, Object> kafkaTemplate;
+		
 	public void accountCreationMail(Users user) {
-		ResponseEntity<String> response = mailMicroService.sendUserCreationMail(user);
-		
-		if(!response.getStatusCode().is2xxSuccessful()) 
-			throw new MailNotSentException
-				("Failed to send account creation mail for user: " + user.getEmail());
+		kafkaTemplate.send("user.created",user.getId(),user).whenComplete((result,ex) -> {
+			if(ex != null)
+				System.err.println("Failed To Send user Created Event For Email : "+user.getEmail()+
+						" To MailService : " + ex.getMessage());
+			else
+				System.out.println("User Created Event is Acutally Delivered For Email : "+user.getEmail()
+				+" To MailService Partition : "+result.getRecordMetadata().partition());
+		});
 	}
 	
-	@CircuitBreaker(name = "MailService" , fallbackMethod = "accountcreationMailFallback")
 	public void accountCreationMail(Admins admin) {
-		ResponseEntity<String> response = mailMicroService.sendAdminCreationMail(admin);
-		
-		if(!response.getStatusCode().is2xxSuccessful()) 
-			throw new MailNotSentException
-				("Failed to send account creation mail for admin: " + admin.getEmail());
+		kafkaTemplate.send("admin.created",admin.getId(),admin).whenComplete((result,ex) -> {
+			if(ex != null)
+				System.err.println("Failed To Send Admin Created Event For Email : "+admin.getEmail()+
+						" To MailService : " + ex.getMessage());
+			else
+				System.out.println("Admin Created Event is Acutally Delivered For Email : "+admin.getEmail()
+				+" To MailService Partition : "+result.getRecordMetadata().partition());
+		});
 	}
 	
-	@CircuitBreaker(name = "MailService" , fallbackMethod = "forgotPasswordForUserMailFallback")
-	public void forgotPasswordMail(Users user,String token) {
-		ResponseEntity<String> response = mailMicroService
-				.sendForgotPasswordMailForUser(new UserForgotPasswordRequest(user, token));
-		
-		if(!response.getStatusCode().is2xxSuccessful()) 
-			throw new MailNotSentException
-				("Failed to send forgot password mail for user: " + user.getEmail());
+	public void forgotPasswordMail(Users user, String token) {
+		UserForgotPasswordRequest userForgotPasswordRequest = new UserForgotPasswordRequest(user,token);
+	    kafkaTemplate.send("user.forgot-password",user.getId(),userForgotPasswordRequest)
+	        .whenComplete((result,ex) -> {
+	            if (ex != null) 
+	            	System.err.println("Failed To Send user Forgot Password Event For Email : "
+	            			+user.getEmail()+" To MailService : " + ex.getMessage());
+	            else 
+	            	System.out.println("User Forgot Password Event is Acutally Delivered For Email : "
+	            			+user.getEmail()+" To MailService Partition : "
+	            				+result.getRecordMetadata().partition());
+	        });
 	}
 	
-	@CircuitBreaker(name = "MailService" , fallbackMethod = "forgotPasswordForAdminMailFallback")
 	public void forgotPasswordMail(Admins admin,String token) {
-		ResponseEntity<String> response = mailMicroService
-				.sendForgotPasswordMailForAdmin(new AdminForgotPasswordRequest(admin, token));
-		
-		if(!response.getStatusCode().is2xxSuccessful()) 
-			throw new MailNotSentException
-				("Failed to send forgot password mail for admin: " + admin.getEmail());}
+		AdminForgotPasswordRequest adminForgotPasswordRequest = new AdminForgotPasswordRequest(admin,token);
+		kafkaTemplate.send("admin.forgot-password",admin.getId(),adminForgotPasswordRequest)
+			.whenComplete((result,ex) -> {
+					if (ex != null) 
+						System.err.println("Failed To Send Admin Forgot Password Event For Email : "
+								+admin.getEmail()+" To MailService : " + ex.getMessage());
+		            else 
+		            	System.out.println("Admin Forgot Password Event is Acutally Delivered For Email : "
+		            			+admin.getEmail()+" To MailService Partition : "
+		            				+result.getRecordMetadata().partition());
+			});
+	}
 	
-	@CircuitBreaker(name = "MailService" , fallbackMethod = "userAccountDeletionMailFallback")
 	public void userAccountDeletionMail(Users user) {
-		ResponseEntity<String> response = mailMicroService.userAccountDeletionMail(user);
-		
-		if(!response.getStatusCode().is2xxSuccessful()) 
-			throw new MailNotSentException
-				("Failed to send account deletion mail for user: " + user.getEmail());
+		kafkaTemplate.send("user.deleted",user.getId(),user).whenComplete((result,ex) -> {
+			if (ex != null) 
+				System.err.println("Failed To Send user Deleted Event For Email : "+user.getEmail()+
+						" To MailService : " + ex.getMessage());
+            else 
+            	System.out.println("User Deleted Event is Acutally Delivered For Email : "+user.getEmail()
+				+" To MailService Partition : "+result.getRecordMetadata().partition());
+		});
 	}
 	
-	@CircuitBreaker(name = "MailService" , fallbackMethod = "adminAccountDeletionMailFallback")
 	public void adminAccountDeletionMail(Admins admin) {
-		ResponseEntity<String> response = mailMicroService.adminAccountDeletionMail(admin);
-		
-		if(!response.getStatusCode().is2xxSuccessful()) 
-			throw new MailNotSentException
-				("Failed to send account deletion mail for admin: " + admin.getEmail());
-	}
-	
-	public void accountcreationMailFallback(Users user, Exception ex) {
-		ex.printStackTrace();
-		System.err.println("Mail Service unavailable for user: " + user.getEmail());
-	}
-	
-	public void forgotPasswordForUserMailFallback(Users user, String token, Exception ex) {
-		ex.printStackTrace();
-		System.err.println("Mail Service unavailable for user: " + user.getEmail());
-	}
-	
-	public void forgotPasswordForAdminMailFallback(Admins admin, String token, Exception ex) {
-		ex.printStackTrace();
-		System.err.println("Mail Service unavailable for admin: " + admin.getEmail());
-	}
-	
-	public void userAccountDeletionMailFallback(Users user, Exception ex) {
-		ex.printStackTrace();
-		System.err.println("Mail Service unavailable for user: " + user.getEmail());
-	}
-	
-	public void adminAccountDeletionMailFallback(Admins admin, Exception ex) {
-		ex.printStackTrace();
-		System.err.println("Mail Service unavailable for admin: " + admin.getEmail());
-	}
-	
-	public void accountcreationMailFallback(Admins admin, Exception ex) {
-		ex.printStackTrace();
-		System.err.println("Mail Service unavailable for admin: " + admin.getEmail());
+		kafkaTemplate.send("admin.deleted",admin.getId(),admin).whenComplete((result,ex) -> {
+			if (ex != null) 
+				System.err.println("Failed To Send Admin Created Event For Email : "+admin.getEmail()+
+						" To MailService : " + ex.getMessage());
+            else 
+            	System.out.println("Admin Created Event is Acutally Delivered For Email : "+admin.getEmail()
+				+" To MailService Partition : "+result.getRecordMetadata().partition());
+		});
 	}
 	
 }

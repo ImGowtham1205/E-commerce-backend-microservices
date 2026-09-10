@@ -5,7 +5,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -69,15 +68,4 @@ public class CartController {
 		return ResponseEntity.ok(cartService.getCartTotal(userid));
 	}
 	
-	@DeleteMapping("/api/user/deleteusercart/{userid}")
-	public ResponseEntity<String> deleteUserCartItems(@PathVariable long userid) throws Exception {
-		cartService.deleteUserCartItems(userid);
-		return ResponseEntity.ok("User Cart Record Deleted Successfully For UserID : " + userid);
-	}
-	
-	@DeleteMapping("/api/admin/deletecartbyproductid/{productid}")
-	public ResponseEntity<String> deleteCartItemsByProductId(@PathVariable long productid) throws Exception {
-		cartService.deleteCartItemsByProductId(productid);
-		return ResponseEntity.ok("Cart Record Deleted Successfully For Product ID : " + productid);
-	}
 }

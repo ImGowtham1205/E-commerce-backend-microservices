@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.authservice.exception.PasswordNotMatchException;
 import com.example.authservice.model.AdminPasswordResetToken;
 import com.example.authservice.model.Admins;
 import com.example.authservice.model.PasswordResetToken;
@@ -73,7 +74,7 @@ public class PasswordController {
 			passwordTokenService.deleteAdminToken(aprt);
 		}
 		
-		return ResponseEntity.status(HttpStatus.OK).body("Password reset successfully");
+		return ResponseEntity.status(HttpStatus.OK).body("Password Reset Successfully");
 	}
 	
 	@PutMapping("/api/user/changepassword")
@@ -94,11 +95,11 @@ public class PasswordController {
 		Users user = userService.getUserEntity(email);
 		
 		if(!(passwordService.checkCurrentPassword(user, currentPassword)))
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Current password doesn't match");
+			throw new PasswordNotMatchException("Current Password Doesn't Match");
 		
 		user.setPassword(encorder.encode(newPassword));
 		passwordService.changepassword(user);
-		return ResponseEntity.status(HttpStatus.OK).body("Password updated successfully");
+		return ResponseEntity.status(HttpStatus.OK).body("Password Updated Successfully");
 	}
 	
 	@PutMapping("/api/admin/changepassword")
@@ -116,10 +117,10 @@ public class PasswordController {
 		Admins admin = userService.getAdminEntity(email);
 		
 		if(!(passwordService.checkCurrentPassword(admin, currentPassword)))
-			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Current password doesn't match");
+			throw new PasswordNotMatchException("Current Password Doesn't Match");
 		
 		admin.setPassword(encorder.encode(newPassword));
 		passwordService.changepassword(admin);
-		return ResponseEntity.status(HttpStatus.OK).body("Password updated successfully");
+		return ResponseEntity.status(HttpStatus.OK).body("Password Updated Successfully");
 	}
 }

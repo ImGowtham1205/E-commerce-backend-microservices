@@ -27,4 +27,5 @@ public class Cart implements Serializable{
 	@Indexed
 	private long productId;
 	private long quantity;
+	
 }

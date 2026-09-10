@@ -40,20 +40,26 @@ public class PaymentService {
 	public Map<String, String> createOrder(double amonut,String token) throws RazorpayException {
 
 		String email = jwtService.extractEmail(token);
+		
+		try {
+			RazorpayClient client = new RazorpayClient(clientid, clientsecret);
 
-		RazorpayClient client = new RazorpayClient(clientid, clientsecret);
+			JSONObject obj = new JSONObject();
+			obj.put("amount", amonut * 100);
+			obj.put("currency", "INR");
+			obj.put("receipt", email + System.currentTimeMillis());
 
-		JSONObject obj = new JSONObject();
-		obj.put("amount", amonut * 100);
-		obj.put("currency", "INR");
-		obj.put("receipt", email + System.currentTimeMillis());
+			Order order = client.orders.create(obj);
 
-		Order order = client.orders.create(obj);
-
-		Map<String, String> response = new HashMap<>();
-		response.put("id", order.get("id").toString());
-		response.put("amount", order.get("amount").toString());
-		return response;
+			Map<String, String> response = new HashMap<>();
+			response.put("id", order.get("id").toString());
+			response.put("amount", order.get("amount").toString());
+			return response;
+		}catch (RazorpayException e) {
+			e.getMessage();
+			e.printStackTrace();
+			throw e;
+		}
 	}
 
 	public String verifyPayment(Map<String, String> data) {
@@ -80,6 +86,7 @@ public class PaymentService {
 			return "Payment successful";
 			
 		} catch (RazorpayException e) {
+			e.getMessage();
 			e.printStackTrace();
 			return "Payment failed";
 		}

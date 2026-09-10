@@ -16,7 +16,7 @@ import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 @EnableWebFluxSecurity
 public class SecurityConfig {
 	@Bean
-	public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
+	SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
 	    return http
 	    	.cors(cors->cors.configurationSource(corsConfigurationSource()))
 	        .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
@@ -35,7 +35,7 @@ public class SecurityConfig {
 	}
 
 	@Bean
-	public CorsConfigurationSource corsConfigurationSource() {
+	CorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration config = new CorsConfiguration();
 		config.setAllowedOrigins(List.of("http://localhost:5173"));
 		config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));

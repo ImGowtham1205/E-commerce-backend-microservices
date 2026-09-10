@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.order_service.exception.OrderNotFoundException;
 import com.example.order_service.jwt.JwtService;
 import com.example.order_service.model.Orders;
 import com.example.order_service.model.Products;
@@ -48,7 +47,7 @@ public class OrderController {
 
 		product.setStock(product.getStock() - 1);
 		orderService.placeOrder(order,product,user);
-		return ResponseEntity.ok("Product purchased successfully");		
+		return ResponseEntity.ok("Product Purchased Successfully");		
 	}
 	
 	@GetMapping("/api/user/fetchorder")
@@ -68,8 +67,8 @@ public class OrderController {
 	
 	@DeleteMapping("/api/user/cancelorder/{orderid}")
 	public ResponseEntity<String> cancelOrder(@PathVariable long orderid , HttpServletRequest request) 
-			throws RazorpayException , OrderNotFoundException{
+			throws RazorpayException{
 		orderService.cancelOrder(orderid , request);
-		return ResponseEntity.ok("Order cancelled successfully");
+		return ResponseEntity.ok("Order Cancelled Successfully");
 	}
 }

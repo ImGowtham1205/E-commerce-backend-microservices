@@ -1,6 +1,5 @@
 package com.example.MailService.service;
 
-import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
@@ -19,7 +18,7 @@ public class MailService {
 	
 	private final JavaMailSender sender;
 	
-	public void accountCreationMail(Users user) throws MailException , Exception {
+	public void accountCreationMail(Users user) {
 		
 		String subject = "Welcome to AzCart – Your Account Has Been Created Successfully 🎉";
 		String receiver = user.getEmail();
@@ -46,8 +45,7 @@ public class MailService {
 		send(receiver, subject, body);
 	}
 	
-	public void forgotPasswordMail(Users user,String token) throws MailException , Exception {
-		
+	public void forgotPasswordMail(Users user,String token) {
 		String subject = "AZCART – Reset Your Password";
 		String receiver =  user.getEmail();
 		String url = "http://localhost:5173/reset-password?token="+token;
@@ -79,7 +77,7 @@ public class MailService {
 		send(receiver, subject, body);
 	}
 	
-	public void forgotPasswordMail(Admins admin,String token) throws MailException , Exception {
+	public void forgotPasswordMail(Admins admin,String token) {
 		
 		String subject = "AZCART – Reset Your Password";
 		String receiver =  admin.getEmail();
@@ -112,7 +110,7 @@ public class MailService {
 		send(receiver, subject, body);
 	}
 
-	public void userAccountDeletionMail(Users user) throws MailException , Exception {
+	public void userAccountDeletionMail(Users user) {
 			
 		String subject = "Confirmation of Account Deletion";
 		String reciever = user.getEmail();
@@ -135,7 +133,7 @@ public class MailService {
 		send(reciever, subject, body);
 	}
 	
-	public void adminAccountDeletionMail(Admins admin) throws MailException , Exception {
+	public void adminAccountDeletionMail(Admins admin) {
 	
 		String subject = "Admin Account Deletion Notification";
 		String receiver = admin.getEmail();
@@ -158,8 +156,7 @@ public class MailService {
 		send(receiver, subject, body);
 	}
 	
-	public void orderConfirmationMail(Products product, UserCache user, Orders order) 
-				throws MailException , Exception {
+	public void orderConfirmationMail(Products product, UserCache user, Orders order) {
 		
 		String subject = "Order Confirmation – Your Order Has Been Successfully Placed";
 		String receiver = user.getEmail();
@@ -189,7 +186,7 @@ public class MailService {
 		send(receiver, subject, body);
 	}
 	
-	public void adminAccountCreationMail(Admins admin) throws MailException , Exception {
+	public void adminAccountCreationMail(Admins admin) {
 		
 		String subject = "Welcome to AzCart Admin Panel – Account Created Successfully 🎉";
 		String receiver = admin.getEmail();
@@ -215,8 +212,7 @@ public class MailService {
 		send(receiver, subject, body);
 	}
 
-	public void orderCancellationMail(Products product, UserCache user, Orders order) 
-			throws MailException , Exception {
+	public void orderCancellationMail(Products product, UserCache user, Orders order) {
 		
 		String subject = "Order Cancelled – Your AzCart Order Has Been Cancelled";
 		String receiver = user.getEmail();
@@ -242,7 +238,7 @@ public class MailService {
 		send(receiver, subject, body);
 	}
 	
-	private void send(String receiver, String subject, String body) throws MailException , Exception {
+	private void send(String receiver, String subject, String body) {
 	    SimpleMailMessage message = new SimpleMailMessage();
 	    message.setTo(receiver);
 	    message.setSubject(subject);

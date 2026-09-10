@@ -69,7 +69,7 @@ public class CommentService {
 		commentRepo.deleteByproductid(productid);
 	}
 	
-	public void deleteUserComments(long userid) throws Exception {
+	public void deleteUserComments(long userid) {
 		List<Comment> userComments = commentRepo.findByUserid(userid);
 		commentRepo.deleteByUserid(userid);
 		userComments.forEach(cmt -> evictCommentCache(cmt.getProductid()));

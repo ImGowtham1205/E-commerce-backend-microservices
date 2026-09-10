@@ -8,7 +8,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.authservice.exception.PhoneNumberAlreadyExistsException;
 import com.example.authservice.model.UserCache;
 import com.example.authservice.model.Users;
 import com.example.authservice.service.JwtService;
@@ -28,7 +27,7 @@ public class UserProfileCompleteController {
 		
 	@PutMapping("/api/user/complete-profile")
 	public UserCache profileComplete(@RequestBody Map<String,String> profile
-			,HttpServletRequest request) throws PhoneNumberAlreadyExistsException{
+			,HttpServletRequest request) {
 		String password = profile.get("password");
 		String address = profile.get("address");
 		String phoneno = profile.get("phoneno");

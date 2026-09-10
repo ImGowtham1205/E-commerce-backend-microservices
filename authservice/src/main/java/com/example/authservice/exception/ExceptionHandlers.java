@@ -10,32 +10,38 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class ExceptionHandlers {
 
 	@ExceptionHandler(AuthenticationException.class)
-	public ResponseEntity<String> loginException(){
+	public ResponseEntity<String> loginExceptionHandler(){
 		return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
 				.body("Incorrect mail id or password");
 	}
 	
 	@ExceptionHandler(PhoneNumberAlreadyExistsException.class)
-	public ResponseEntity<String> userPhonenoException(PhoneNumberAlreadyExistsException ex){
+	public ResponseEntity<String> userPhonenoExceptionHandler(PhoneNumberAlreadyExistsException ex){
 		return ResponseEntity.status(HttpStatus.CONFLICT)
 				.body(ex.getMessage());
 	}
 	
 	@ExceptionHandler(EmailNotExistsException.class)
-	public ResponseEntity<String> userEmailException(EmailNotExistsException ex){
+	public ResponseEntity<String> userEmailExceptionHandler(EmailNotExistsException ex){
 		return ResponseEntity.status(HttpStatus.NOT_FOUND)
 				.body(ex.getMessage());
 	}
 	
 	@ExceptionHandler(PasswordNotMatchException.class)
-	public ResponseEntity<String> passwordNotMatchException(PasswordNotMatchException ex){
+	public ResponseEntity<String> passwordNotMatchExceptionHandler(PasswordNotMatchException ex){
 		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
 				.body(ex.getMessage());
 	}
 	
-	@ExceptionHandler(MailNotSentException.class)
-	public ResponseEntity<String> mailNotSentException(MailNotSentException ex){
-		return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+	@ExceptionHandler(CartRecordDeletionException.class)
+	public ResponseEntity<String> CartRecordDeletionExceptionHandler(CartRecordDeletionException ex){
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+				.body(ex.getMessage());
+	}
+	
+	@ExceptionHandler(CommentRecordDeletionException.class)
+	public ResponseEntity<String> CommentRecordDeletionExceptionHandler(CommentRecordDeletionException ex){
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
 				.body(ex.getMessage());
 	}
 	

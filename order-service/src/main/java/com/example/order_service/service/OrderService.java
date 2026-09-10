@@ -13,12 +13,16 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
+import com.example.order_service.exception.OrderAlreadyCancelledException;
 import com.example.order_service.exception.OrderNotFoundException;
+import com.example.order_service.exception.PaymentMisMatchException;
+import com.example.order_service.exception.PaymentNotCapturedException;
 import com.example.order_service.feign.ProductMicroService;
 import com.example.order_service.model.Orders;
 import com.example.order_service.model.Products;
 import com.example.order_service.model.UserCache;
 import com.example.order_service.repository.OrdersRepo;
+import com.razorpay.Payment;
 import com.razorpay.RazorpayClient;
 import com.razorpay.RazorpayException;
 import com.razorpay.Refund;
@@ -73,43 +77,65 @@ public class OrderService {
 	}
 	
 	@CacheEvict(value = "orders", allEntries = true) 		
-	public Orders cancelOrder(long orderid , HttpServletRequest request) 
-			throws OrderNotFoundException, RazorpayException {
-		try {
-			Orders order = orderRepo.findById(orderid)
-					.orElseThrow(() -> new OrderNotFoundException("Order not found with id: " + orderid));
-			
-			UserCache user = fetchUser(request);
-			Products product = productService.fetchProductById(order.getProductid());
-			
-			if ("RAZORPAY".equals(order.getPaymentmethod())) {
-				
-				RazorpayClient client = new RazorpayClient(clientId, clientSecret);
-				JSONObject refundReq = new JSONObject();
-				refundReq.put("amount", Math.round(order.getPrice() * 100));
-				Refund refund = client.payments.refund(order.getPaymentid(), refundReq);
-				String refundid = refund.get("id");
-				String status = refund.get("status");
-				order.setPayment_Status("REFUNDED");
-				order.setRefundid(refundid);
-				order.setRefundstatus(status);
-				
-			} else
-				order.setPayment_Status("CANCELLED");
-			
-			order.setOrder_status("CANCELLED");
-			Orders updatedOrder = orderRepo.save(order);
-			cacheManager.getCache("orders").evict("user :" + order.getUserid());
-			mailService.orderCancellationMail(product, user, order);
-			return updatedOrder;
-		}catch (RazorpayException e) {
-			e.getMessage();
-		    e.printStackTrace();
-		    throw e;
-		}
-		
-	}
+	public Orders cancelOrder(long orderid , HttpServletRequest request) throws RazorpayException {
+       
+            Orders order = orderRepo.findById(orderid)
+                    .orElseThrow(() -> new OrderNotFoundException("Order not found with id: " + orderid));
+            
+            if("CANCELLED".equals(order.getOrder_status()))
+            	throw new OrderAlreadyCancelledException("Order " + orderid + " is already cancelled");
+            
+            UserCache user = fetchUser(request);
+            Products product = productService.fetchProductById(order.getProductid());
+            
+            try {
+            	
+            if ("RAZORPAY".equals(order.getPaymentmethod())) {
 
+                RazorpayClient client = new RazorpayClient(clientId, clientSecret);
+                
+                Payment payment = client.payments.fetch(order.getPaymentid());
+                String paymentStatus = payment.get("status");
+                int amountCaptured = payment.get("amount");
+                int amountRefunded = payment.get("amount_refunded");
+                long refundAmount = Math.round(order.getPrice() * 100);
+                
+                if(!"captured".equals(paymentStatus))
+                	throw new PaymentNotCapturedException("Payment " + order.getPaymentid() + " is not captured "
+                			+ "(status: " + paymentStatus + "), cannot refund");
+                
+                long refundableAmount = amountCaptured - amountRefunded;
+                
+                if(refundAmount > refundableAmount)
+                	throw new PaymentMisMatchException("Refund amount " + refundAmount + " exceeds refundable "
+                			+ "amount " + refundableAmount + " for payment " + order.getPaymentid());
+                
+                JSONObject refundReq = new JSONObject();
+                refundReq.put("amount", refundAmount);
+                Refund refund = client.payments.refund(order.getPaymentid(), refundReq);
+                String refundid = refund.get("id");
+                String status = refund.get("status");
+                order.setPayment_Status("REFUNDED");
+                order.setRefundid(refundid);
+                order.setRefundstatus(status);
+
+            }
+               	
+             else
+                order.setPayment_Status("CANCELLED");
+
+            order.setOrder_status("CANCELLED");
+            Orders updatedOrder = orderRepo.save(order);
+            cacheManager.getCache("orders").evict("user :" + order.getUserid());
+            mailService.orderCancellationMail(product, user, order);
+            return updatedOrder;
+        }catch (RazorpayException e) {
+            e.getMessage();
+            e.printStackTrace();
+            throw e;
+        }
+
+    }
 	public Orders buildOrder(long productid, UserCache user, String paymentMethod, 
 			String paymentStatus, String paymentId) {
 

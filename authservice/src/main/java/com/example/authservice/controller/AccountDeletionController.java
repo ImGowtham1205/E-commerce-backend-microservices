@@ -5,8 +5,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.authservice.exception.EmailNotExistsException;
-import com.example.authservice.exception.PasswordNotMatchException;
 import com.example.authservice.model.Admins;
 import com.example.authservice.model.Users;
 import com.example.authservice.service.AccountDeletionService;
@@ -24,8 +22,7 @@ public class AccountDeletionController {
 	private final AccountDeletionService accountDeletionService;
 
 	@DeleteMapping("/api/user/accountdeletion")
-	public Users userAccountDelete(HttpServletRequest request, @RequestBody Users user)
-			throws EmailNotExistsException, PasswordNotMatchException {
+	public Users userAccountDelete(HttpServletRequest request, @RequestBody Users user) {
 		
 		String password = user.getPassword();
 		String token = jwtService.getToken(request);

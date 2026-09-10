@@ -76,18 +76,4 @@ public class CommentController {
 		return ResponseEntity.ok(id);
 	}
 	
-	@DeleteMapping("/api/user/deleteusercomments/{userid}")
-	public ResponseEntity<String> deleteUserComments(@PathVariable long userid) throws Exception {
-		commentService.deleteUserComments(userid);
-		return ResponseEntity.ok("User Comment Record Deleted Successfully For UserID : " + userid);
-	}
-	
-	@DeleteMapping("/api/admin/deleteproductcomment/{productid}")
-	public ResponseEntity<String> deleteCommentsByProductId
-		(@PathVariable long productid) throws Exception {
-			commentService.deleteproductComments(productid);
-			return ResponseEntity
-					.ok("User Comment Record Deleted Successfully For ProductID : " + productid);
-	}	
-	
 }
