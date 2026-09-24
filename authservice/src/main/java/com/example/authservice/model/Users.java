@@ -14,6 +14,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
@@ -23,9 +24,11 @@ import lombok.Setter;
 @Entity
 @Table( name ="users",
 		uniqueConstraints = @UniqueConstraint(columnNames = {"email","phoneno"}),
- 		indexes = {@Index(name = "idx_users_email", columnList = "email")
- 				  ,@Index(name = "idx_users_phoneno", columnList = "phoneno")})
-
+ 		indexes = {
+ 				@Index(name = "idx_users_email", columnList = "email"),
+ 				@Index(name = "idx_users_phoneno", columnList = "phoneno")
+ 		}
+)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -59,9 +62,9 @@ public class Users implements Serializable{
 	@Column(name = "is_profile_completed")
 	private boolean profileCompleted;
 	
-	@OneToMany(mappedBy = "user",cascade = CascadeType.REMOVE,orphanRemoval = true)
+	@OneToOne(mappedBy = "user",cascade = CascadeType.REMOVE,orphanRemoval = true)
 	@JsonIgnore
-	private List<PasswordResetToken> token;
+	private PasswordResetOtp password_otp;
 	
 	@OneToMany(mappedBy = "userid",cascade = CascadeType.REMOVE,orphanRemoval = true)
 	@JsonIgnore 

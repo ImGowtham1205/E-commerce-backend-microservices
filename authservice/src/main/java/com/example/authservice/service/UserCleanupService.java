@@ -20,7 +20,7 @@ public class UserCleanupService {
 				 throw new CartRecordDeletionException("Failed To Send User Account Deleted Event To "
 				 		+ "CartService : " + ex.getMessage());
 				else
-					System.out.println("User Deleted Created Event Is Actually Delivered To CartService "
+					System.out.println("User Account Deleted Event Is Actually Delivered To CartService "
 							+ "Partition : " + result.getRecordMetadata().partition());
 		 });
 	}
@@ -31,7 +31,7 @@ public class UserCleanupService {
 				throw new CommentRecordDeletionException("Failed To Send User Deleted Created Event To "
 						+ "CommentService : " + ex.getMessage());
 			else
-				System.out.println("User Account Created Event Is Actually Delivered To CommentService "
+				System.out.println("User Account Deleted Event Is Actually Delivered To CommentService "
 						+ "Partition : " + result.getRecordMetadata().partition());
 		});
 	}

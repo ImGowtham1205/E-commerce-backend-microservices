@@ -1,7 +1,6 @@
 package com.example.authservice.service;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -9,9 +8,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.example.authservice.model.AdminCache;
-import com.example.authservice.model.AdminPasswordResetToken;
+import com.example.authservice.model.AdminPasswordResetOtp;
 import com.example.authservice.model.Admins;
-import com.example.authservice.model.PasswordResetToken;
+import com.example.authservice.model.PasswordResetOtp;
 import com.example.authservice.model.UserCache;
 import com.example.authservice.model.Users;
 
@@ -24,11 +23,12 @@ public class PasswordService {
 	private final MailService mailService;
 	private final PasswordEncoder encorder;
 	private final UsersService userService;
-	private final PasswordTokenService passwordTokenService;
+	private final PasswordOtpService passwordOtpService;
 	private final PasswordServiceCache passwordServiceCache;
+	private final OtpGeneratorService otpGeneratorService;
 	
 	public ResponseEntity<String> forgotPassword(String email) {
-		String token = UUID.randomUUID().toString();
+		String otp = null;
 		Users user = null;
 		Admins admin = null;
 		user = userService.getUserEntity(email);
@@ -38,25 +38,53 @@ public class PasswordService {
 			if (admin == null) 
 				return ResponseEntity.status(HttpStatus.NOT_FOUND)
 						.body("Please Enter Your Registered Email");
-			
 		}
 		
 		if (user != null) {
-			PasswordResetToken prt = new PasswordResetToken();
-			prt.setToken(token);
-			prt.setUser(user);
-			prt.setExpiryTime(LocalDateTime.now().plusMinutes(15));
-			passwordTokenService.savePasswordToken(prt);
-			mailService.forgotPasswordMail(user, token);
+			PasswordResetOtp existingOtp = passwordOtpService.getUser(user);
+			
+			if(existingOtp != null) {
+				otp = existingOtp.getOtp();
+				existingOtp.setStatus("unused");
+				existingOtp.setExpiryTime(LocalDateTime.now().plusMinutes(15));
+				passwordOtpService.savePasswordOtp(existingOtp);
+				mailService.forgotPasswordMail(user, otp);
+			}
+			
+			else {
+				PasswordResetOtp pro = new PasswordResetOtp();
+				otp = otpGeneratorService.generateOtp();
+				pro.setOtp(otp);
+				pro.setStatus("unused");
+				pro.setUser(user);
+				pro.setExpiryTime(LocalDateTime.now().plusMinutes(15));
+				passwordOtpService.savePasswordOtp(pro);
+				mailService.forgotPasswordMail(user, otp);
+			}
 		}
 		
 		if (admin != null) {
-			AdminPasswordResetToken aprt = new AdminPasswordResetToken();
-			aprt.setToken(token);
-			aprt.setAdmin(admin);
-			aprt.setExpirydate(LocalDateTime.now().plusMinutes(15));
-			passwordTokenService.saveAdminPasswordToken(aprt);
-			mailService.forgotPasswordMail(admin, token);
+			AdminPasswordResetOtp existingOtp = passwordOtpService.getAdmin(admin);
+			
+			if(existingOtp != null) {
+				otp = existingOtp.getOtp();
+				existingOtp.setStatus("unused");
+				existingOtp.setExpiryTime(LocalDateTime.now().plusMinutes(15));
+				passwordOtpService.saveAdminPasswordOtp(existingOtp);
+				mailService.forgotPasswordMail(admin, otp);
+			}
+			
+			else {
+				AdminPasswordResetOtp apro = new AdminPasswordResetOtp();
+				otp = otpGeneratorService.generateOtp();
+				apro.setOtp(otp);
+				apro.setStatus("unused");
+				apro.setAdmin(admin);
+				apro.setExpiryTime(LocalDateTime.now().plusMinutes(15));
+				passwordOtpService.saveAdminPasswordOtp(apro);
+				mailService.forgotPasswordMail(admin, otp);
+			}
+			
 		}
 		return ResponseEntity.status(HttpStatus.OK).body("Mail Sent Successfully");
 	}

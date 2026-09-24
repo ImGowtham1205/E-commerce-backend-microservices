@@ -14,6 +14,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
@@ -50,9 +51,9 @@ public class Admins implements Serializable {
 	@Column(nullable = false)
 	private String role = "ADMIN";
 	
-	@OneToMany(mappedBy = "admin",cascade = CascadeType.REMOVE,orphanRemoval = true)
+	@OneToOne(mappedBy = "admin",cascade = CascadeType.REMOVE,orphanRemoval = true)
 	@JsonIgnore 
-	private List<AdminPasswordResetToken> token;
+	private AdminPasswordResetOtp password_otp;
 	
 	@OneToMany(mappedBy = "adminid",cascade = CascadeType.REMOVE,orphanRemoval = true)
 	@JsonIgnore 

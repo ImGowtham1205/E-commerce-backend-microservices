@@ -45,10 +45,10 @@ public class MailService {
 		send(receiver, subject, body);
 	}
 	
-	public void forgotPasswordMail(Users user,String token) {
+	public void forgotPasswordMail(Users user,String otp) {
 		String subject = "AZCART – Reset Your Password";
 		String receiver =  user.getEmail();
-		String url = "http://localhost:5173/reset-password?token="+token;
+		String url = "http://localhost:5173/reset-password";
 		String body = "Hello "+user.getName()+",\r\n"
 				+ "\r\n"
 				+ "We received a request to reset your AZCART account password.\r\n"
@@ -56,7 +56,8 @@ public class MailService {
 				+ "To create a new password, please click the link below:\r\n"
 				+ url+"\r\n"
 				+ "\r\n"
-				+ "For your security, this link will expire in 15 minutes and can be used only once.\r\n"
+				+ "Your One-Time Password (OTP) for resetting your password is: "+otp+"\r\n"
+				+ "For your security, this link and otp will expire in 15 minutes and can be used only once.\r\n"
 				+ "\r\n"
 				+ "If you did not request a password reset, please ignore this email. Your account will remain secure.\r\n"
 				+ "\r\n"
@@ -77,11 +78,11 @@ public class MailService {
 		send(receiver, subject, body);
 	}
 	
-	public void forgotPasswordMail(Admins admin,String token) {
+	public void forgotPasswordMail(Admins admin,String otp) {
 		
 		String subject = "AZCART – Reset Your Password";
 		String receiver =  admin.getEmail();
-		String url = "http://localhost:5173/reset-password?token="+token;
+		String url = "http://localhost:5173/reset-password";
 		String body = "Hello "+admin.getAdminName()+",\r\n"
 				+ "\r\n"
 				+ "We received a request to reset your AZCART account password.\r\n"
@@ -89,7 +90,8 @@ public class MailService {
 				+ "To create a new password, please click the link below:\r\n"
 				+ url+"\r\n"
 				+ "\r\n"
-				+ "For your security, this link will expire in 15 minutes and can be used only once.\r\n"
+				+ "Your One-Time Password (OTP) for resetting your password is: "+otp+"\r\n"
+				+ "For your security, this link and otp will expire in 15 minutes and can be used only once.\r\n"
 				+ "\r\n"
 				+ "If you did not request a password reset, please ignore this email. Your account will remain secure.\r\n"
 				+ "\r\n"

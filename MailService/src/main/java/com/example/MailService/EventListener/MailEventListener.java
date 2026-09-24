@@ -26,7 +26,7 @@ public class MailEventListener {
 
 	@KafkaListener(topics = "user.forgot-password", groupId = "mail-service-group")
 	public void sendForgotPasswordMailForUser(UserForgotPasswordRequest request) {
-		mailService.forgotPasswordMail(request.getUser(), request.getToken());
+		mailService.forgotPasswordMail(request.getUser(), request.getOtp());
 		System.out.println("User Forgot Password Mail Sent Successfully For Email : " 
 				+ request.getUser().getEmail());
 	}
@@ -51,7 +51,7 @@ public class MailEventListener {
 
 	@KafkaListener(topics = "admin.forgot-password", groupId = "mail-service-group")
 	public void sendForgotPasswordMailForAdmin (AdminForgotPasswordRequest request) {
-		mailService.forgotPasswordMail(request.getAdmin(), request.getToken());
+		mailService.forgotPasswordMail(request.getAdmin(), request.getOtp());
 		System.out.println("Admin Forgot Password Mail Sent Successfully For Email : "
 				+request.getAdmin().getEmail());
 	}

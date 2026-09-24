@@ -38,8 +38,8 @@ public class MailService {
 		});
 	}
 	
-	public void forgotPasswordMail(Users user, String token) {
-		UserForgotPasswordRequest userForgotPasswordRequest = new UserForgotPasswordRequest(user,token);
+	public void forgotPasswordMail(Users user, String otp) {
+		UserForgotPasswordRequest userForgotPasswordRequest = new UserForgotPasswordRequest(user,otp);
 	    kafkaTemplate.send("user.forgot-password",user.getId(),userForgotPasswordRequest)
 	        .whenComplete((result,ex) -> {
 	            if (ex != null) 
@@ -52,8 +52,8 @@ public class MailService {
 	        });
 	}
 	
-	public void forgotPasswordMail(Admins admin,String token) {
-		AdminForgotPasswordRequest adminForgotPasswordRequest = new AdminForgotPasswordRequest(admin,token);
+	public void forgotPasswordMail(Admins admin,String otp) {
+		AdminForgotPasswordRequest adminForgotPasswordRequest = new AdminForgotPasswordRequest(admin,otp);
 		kafkaTemplate.send("admin.forgot-password",admin.getId(),adminForgotPasswordRequest)
 			.whenComplete((result,ex) -> {
 					if (ex != null) 
