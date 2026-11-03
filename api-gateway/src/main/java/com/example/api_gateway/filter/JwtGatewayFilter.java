@@ -1,5 +1,7 @@
 package com.example.api_gateway.filter;
 
+import java.net.InetSocketAddress;
+
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
@@ -10,15 +12,21 @@ import org.springframework.web.server.ServerWebExchange;
 
 import com.example.api_gateway.jwt.JwtService;
 
+import io.github.resilience4j.ratelimiter.RateLimiter;
+import io.github.resilience4j.ratelimiter.RateLimiterRegistry;
+import io.github.resilience4j.ratelimiter.RequestNotPermitted;
+import io.github.resilience4j.reactor.ratelimiter.operator.RateLimiterOperator;
 import reactor.core.publisher.Mono;
 
 @Component
 public class JwtGatewayFilter implements GlobalFilter,Ordered { 
 
 	private final JwtService jwtService;
-
-	public JwtGatewayFilter(JwtService jwtService) {
+	private final RateLimiterRegistry rateLimiterRegistry;
+		
+	public JwtGatewayFilter(JwtService jwtService ,RateLimiterRegistry rateLimiterRegistry) {
 		this.jwtService = jwtService;
+		this.rateLimiterRegistry = rateLimiterRegistry;
 	}
 
 	@Override
@@ -32,8 +40,9 @@ public class JwtGatewayFilter implements GlobalFilter,Ordered {
 	        path.contains("/auth/forgot-password") ||
 	        path.contains("/auth/reset-password") ||
 	        path.startsWith("/api/products/image")) {
-
-	        return chain.filter(exchange);
+	    	
+	    	String Key = "ip:" + getClientIpAddress(exchange);
+	        return withRateLimit(exchange, chain, Key, "Public-Api");
 	    }
 
 	    String authHeader = exchange.getRequest().getHeaders().getFirst("Authorization");
@@ -71,12 +80,35 @@ public class JwtGatewayFilter implements GlobalFilter,Ordered {
 	            .header("X-User-Id", String.valueOf(userId))
 	            .header("X-User-Role", role)
 	            .build();
-
-	    return chain.filter(exchange.mutate().request(mutatedRequest).build());
+	    
+	    String Key = role + userId;
+	    return withRateLimit(exchange.mutate().request(mutatedRequest).build(), chain, Key, "Protected-Api");
+	    
 	}
-
+	
+	private Mono<Void> withRateLimit(ServerWebExchange exchange, GatewayFilterChain chain, String key, String configName){
+		
+		RateLimiter limiter = rateLimiterRegistry.rateLimiter(key,configName);
+		return chain.filter(exchange)
+				.transformDeferred(RateLimiterOperator.of(limiter))
+				.onErrorResume(RequestNotPermitted.class , e -> {
+					exchange.getResponse().setStatusCode(HttpStatus.TOO_MANY_REQUESTS);
+					exchange.getResponse().getHeaders().set("Retry-After", "1");
+					return exchange.getResponse().setComplete();
+				});
+	}
+	
+	private String getClientIpAddress(ServerWebExchange exchange) {
+		String forward = exchange.getRequest().getHeaders().getFirst("X-Forwarded-For");
+		if (forward != null && !forward.isEmpty()) return forward.split(",")[0];
+		
+		InetSocketAddress address = exchange.getRequest().getRemoteAddress();
+		return address != null ? address.getAddress().getHostAddress() : "unknown";
+	}
+	
 	@Override
 	public int getOrder() {
 	    return 100;
 	}
+	
 }
