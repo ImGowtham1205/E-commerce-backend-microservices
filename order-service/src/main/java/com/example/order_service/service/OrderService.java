@@ -98,7 +98,7 @@ public class OrderService {
                 String paymentStatus = payment.get("status");
                 int amountCaptured = payment.get("amount");
                 int amountRefunded = payment.get("amount_refunded");
-                long refundAmount = Math.round(order.getPrice() * 100);
+                int refundAmount = Math.round(order.getPrice() * 100);
                 
                 if(!"captured".equals(paymentStatus))
                 	throw new PaymentNotCapturedException("Payment " + order.getPaymentid() + " is not captured "
@@ -112,10 +112,12 @@ public class OrderService {
                 
                 JSONObject refundReq = new JSONObject();
                 refundReq.put("amount", refundAmount);
+                
                 Refund refund = client.payments.refund(order.getPaymentid(), refundReq);
                 String refundid = refund.get("id");
                 String status = refund.get("status");
                 order.setPayment_Status("REFUNDED");
+                System.out.println("Redund Success");
                 order.setRefundid(refundid);
                 order.setRefundstatus(status);
 
