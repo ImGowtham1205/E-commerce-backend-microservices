@@ -35,11 +35,9 @@ public class JwtGatewayFilter implements GlobalFilter,Ordered {
 	    String path = exchange.getRequest().getURI().getPath();
 	    
 	    if (path.startsWith("/oauth2") || path.startsWith("/login/oauth2") ||
-	        path.contains("/auth/login") ||
-	        path.contains("/auth/register") ||
-	        path.contains("/auth/forgot-password") ||
-	        path.contains("/auth/reset-password") ||
-	        path.startsWith("/api/products/image")) {
+	        path.contains("/auth/login") || path.contains("/auth/register") ||
+	        path.contains("/auth/forgot-password") || path.contains("/auth/reset-password") ||
+	        path.startsWith("/api/products/image") ||  path.startsWith("/actuator")) {
 	    	
 	    	String Key = "ip:" + getClientIpAddress(exchange);
 	        return withRateLimit(exchange, chain, Key, "Public-Api");

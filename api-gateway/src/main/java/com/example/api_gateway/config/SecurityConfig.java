@@ -29,6 +29,7 @@ public class SecurityConfig {
 	            .pathMatchers("/authservice/auth/login","/authservice/auth/register",
 	            		"/authservice/auth/forgot-password","/authservice/auth/reset-password").permitAll()
 	            .pathMatchers("/authservice/oauth2/**","/authservice/login/oauth2/**").permitAll()
+	            .pathMatchers("/actuator/**").permitAll()
 	            .anyExchange().permitAll()
 	        )
 	        .build();

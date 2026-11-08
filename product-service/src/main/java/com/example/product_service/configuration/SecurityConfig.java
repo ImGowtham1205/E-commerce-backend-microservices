@@ -17,7 +17,7 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class SecurityConfig {
 
-    private JwtFilter filter;
+    private final JwtFilter filter;
        
     @Bean
     SecurityFilterChain securityChain(HttpSecurity http) throws Exception {
@@ -27,6 +27,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/products/image/**").permitAll()
                         .requestMatchers("/api/products/**").permitAll()
                         .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers("/actuator/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session ->
