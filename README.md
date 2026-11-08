@@ -2,7 +2,7 @@
 
 AzCart is an e-commerce backend built as **Spring Boot microservices**. It handles authentication (JWT + Google/Amazon OAuth2), product catalog, cart, orders with **Razorpay** payments, product comments, and email notifications, with separate **USER** and **ADMIN** roles.
 
-Services talk to each other through **OpenFeign** (synchronous) and **Apache Kafka** (asynchronous events), are discovered through **Eureka**, and are exposed through a single **Spring Cloud API Gateway** that validates JWTs.
+Services talk to each other through **OpenFeign** (synchronous) and **Apache Kafka** (asynchronous events), are discovered through **Eureka**, and are exposed through a single **Spring Cloud API Gateway** that validates JWTs. Requests are traced across services with **Micrometer Tracing** and **Zipkin**.
 
 > **Status:** Under active development. It runs locally; it is not deployed yet.
 > **Frontend:** The React frontend is not part of this repository. It is expected at `http://localhost:5173`.
@@ -17,6 +17,7 @@ Services talk to each other through **OpenFeign** (synchronous) and **Apache Kaf
 - [Tech Stack](#-tech-stack)
 - [Features](#-features)
 - [Kafka Events](#-kafka-events)
+- [Distributed Tracing (Zipkin)](#-distributed-tracing-zipkin)
 - [Run Locally (Step by Step)](#-run-locally-step-by-step)
 - [Environment Variables](#-environment-variables)
 - [API Reference](#-api-reference)
@@ -60,6 +61,8 @@ Services talk to each other through **OpenFeign** (synchronous) and **Apache Kaf
 
 Every request goes through the gateway, which checks the `Authorization: Bearer <token>` header, refreshes tokens that are close to expiring (returned in the `X-Auth-Token` response header), and forwards the user's id and role to downstream services.
 
+All services except the Service Registry also send trace data to **Zipkin** (`localhost:9411`), so you can follow one request across the gateway, the services, and Kafka. See [Distributed Tracing](#-distributed-tracing-zipkin).
+
 ---
 
 ## 🧩 Services and Ports
@@ -74,6 +77,7 @@ Every request goes through the gateway, which checks the `Authorization: Bearer 
 | Order Service | `order-service` | 8100 | MySQL `orders` | Purchases, Razorpay payment create/verify, order history, cancellation |
 | Comment Service | `comment` | 8060 | MongoDB `comment-db` | Add/update/delete/list product comments |
 | Mail Service | `MailService` | 8050 | – | Consumes Kafka events and sends emails through Gmail SMTP |
+| Zipkin | Docker image `openzipkin/zipkin` | 9411 | In memory | Collects and shows distributed traces |
 
 Redis (`localhost:6379`) is used for caching by the gateway, auth, product, cart, order, and comment services.
 
@@ -82,7 +86,7 @@ Redis (`localhost:6379`) is used for caching by the gateway, auth, product, cart
 ## 🔧 Tech Stack
 
 - **Language / Runtime:** Java 21
-- **Framework:** Spring Boot 4.0.x (Spring Boot 3.2.x for the gateway), Spring Cloud 2025.1.x (2023.0.x for the gateway)
+- **Framework:** Spring Boot 4.0.x, Spring Cloud 2025.1.x
 - **Security:** Spring Security, JWT (jjwt 0.12.6), OAuth2 client (Google, Amazon), BCrypt
 - **Microservices:** Netflix Eureka, Spring Cloud Gateway, OpenFeign, Resilience4j (circuit breaker and time limiter)
 - **Messaging:** Apache Kafka
@@ -90,6 +94,7 @@ Redis (`localhost:6379`) is used for caching by the gateway, auth, product, cart
 - **Caching:** Redis
 - **Payments:** Razorpay (`razorpay-java` 1.4.8)
 - **Email:** Spring Mail (Gmail SMTP)
+- **Observability:** Micrometer Tracing, Zipkin, Spring Boot Actuator
 - **Build:** Maven (wrapper included, no global Maven install needed)
 
 ---
@@ -119,6 +124,7 @@ Redis (`localhost:6379`) is used for caching by the gateway, auth, product, cart
 - Redis caching with dedicated cache service classes
 - Circuit breakers and time limits on inter-service calls
 - Event-driven cleanup: deleting a user or product removes related cart items and comments through Kafka
+- Distributed tracing with Micrometer Tracing and Zipkin, including Kafka messages
 - Global exception handlers in every service
 
 ---
@@ -139,6 +145,45 @@ Redis (`localhost:6379`) is used for caching by the gateway, auth, product, cart
 
 ---
 
+## 📊 Distributed Tracing (Zipkin)
+
+A single user action (for example, placing an order) passes through the gateway, several services, and Kafka. **Distributed tracing** gives every request a **trace ID** and records each hop as a **span**, so you can see the whole path, how long each service took, and where a request failed or slowed down.
+
+AzCart uses **Micrometer Tracing** (through Spring Boot's `spring-boot-starter-zipkin`) to create spans and send them to **Zipkin**, which runs in Docker on port **9411**.
+
+| Item | Details |
+|---|---|
+| Traced services | `api-gateway`, `authservice`, `product-service`, `cart-service`, `order-service`, `comment`, `MailService` (the Service Registry is not traced) |
+| Zipkin UI | http://localhost:9411 |
+| Span endpoint (default) | `http://localhost:9411/api/v2/spans` |
+| Sampling | `management.tracing.sampling.probability = 1.0` (100% of requests, good for development) |
+| Storage | In memory (traces disappear when the Zipkin container restarts) |
+
+**How it is configured**
+
+- Each traced service has the `spring-boot-starter-zipkin` and `spring-boot-starter-actuator` dependencies in its `pom.xml`.
+- Each traced service has `management.tracing.sampling.probability = 1.0` in its `application.properties`.
+- `authservice`, `product-service`, `order-service`, `cart-service`, and `MailService` also enable Kafka observation (`spring.kafka.template.observation-enabled` and `spring.kafka.listener.observation-enabled`), so trace IDs follow messages through Kafka.
+- No Zipkin URL is configured, because Spring Boot sends spans to `http://localhost:9411/api/v2/spans` by default. To use a different Zipkin address, set `management.zipkin.tracing.endpoint` in each service's `application.properties`.
+- No extra environment variables are needed.
+
+**How to view a trace**
+
+1. Start Zipkin ([Step 8](#step-8-start-zipkin-for-distributed-tracing-docker)) and the services.
+2. Make some requests through the gateway, such as logging in, listing products, or placing an order.
+3. Open **http://localhost:9411**.
+4. In the search bar, choose a **Service Name** (start with `api-gateway`) and click **Run Query**.
+5. Click a trace in the results to open its timeline. You will see one span per hop, with durations, across the services that handled the request.
+6. To find one specific request, paste its trace ID into the trace ID field at the top of the UI. Spring Boot also adds the service name, trace ID, and span ID to each service's log lines, so you can match console logs to a trace.
+7. Open the **Dependencies** page to see which services call which.
+
+**Notes**
+
+- Tracing at 100% sampling is for development. For production, lower the sampling probability (for example `0.1`) and use persistent storage for Zipkin.
+- `management.endpoints.web.exposure.include = *` exposes all Actuator endpoints in the current config. That is convenient locally, but restrict it before any real deployment.
+
+---
+
 ## 🚀 Run Locally (Step by Step)
 
 ### Step 1: Install prerequisites
@@ -147,7 +192,7 @@ Redis (`localhost:6379`) is used for caching by the gateway, auth, product, cart
 |---|---|---|
 | JDK | 21 | `java -version` |
 | Git | any | `git --version` |
-| Docker Desktop | any | `docker --version` (required for Kafka; optional for MySQL, MongoDB, Redis) |
+| Docker Desktop | any | `docker --version` (required for Kafka and Zipkin; optional for MySQL, MongoDB, Redis) |
 
 You do **not** need to install Maven; each service includes `mvnw` (Linux/macOS) and `mvnw.cmd` (Windows).
 
@@ -703,7 +748,67 @@ http://localhost:8765/authservice/login/oauth2/code/google
 http://localhost:8765/authservice/login/oauth2/code/amazon
 ```
 
-### Step 8: Start the services in order
+### Step 8: Start Zipkin for distributed tracing (Docker)
+
+Zipkin collects and displays the traces from your services. Start it **before** the services so no spans are lost.
+
+**8.1** Make sure Docker Desktop is running:
+
+```bash
+docker --version
+```
+
+**8.2** Start Zipkin on port `9411`:
+
+```bash
+docker run -d --name zipkin -p 9411:9411 openzipkin/zipkin
+```
+
+The first run downloads the image, which can take a minute. `-d` runs it in the background, and `--name zipkin` lets you stop and start it by name.
+
+> **Prefer a compose file?** Inside the `docker` folder, create `zipkin-compose.yml`:
+> ```yaml
+> services:
+>   zipkin:
+>     image: openzipkin/zipkin
+>     container_name: zipkin
+>     ports:
+>       - "9411:9411"
+> ```
+> and start it with `docker compose -f docker/zipkin-compose.yml up -d`.
+
+**8.3** Check that it is running:
+
+```bash
+docker ps
+```
+
+You should see a `zipkin` container with `0.0.0.0:9411->9411/tcp`.
+
+**8.4** Open the UI at **http://localhost:9411**. It will be empty until the services handle some requests. You can also check its health:
+
+```bash
+curl http://localhost:9411/health
+```
+
+**Useful commands**
+
+| Task | Command |
+|---|---|
+| Stop Zipkin | `docker stop zipkin` |
+| Start it again | `docker start zipkin` |
+| Remove it | `docker rm -f zipkin` |
+| View its logs | `docker logs -f zipkin` |
+
+Zipkin keeps traces in memory, so stopping and starting the container clears them.
+
+If port `9411` is already in use, map another host port (for example `-p 9412:9411`) and set `management.zipkin.tracing.endpoint=http://localhost:9412/api/v2/spans` in each service's `application.properties`.
+
+---
+
+### Step 9: Start the services in order
+
+Make sure Kafka, the databases, and Zipkin (Step 8) are already running.
 
 Open **one terminal per service** (with the environment variables set), from the project root.
 
@@ -735,12 +840,13 @@ cd service-registry; .\mvnw.cmd spring-boot:run
 
 The first start of each service downloads dependencies, so it takes a few minutes.
 
-### Step 9: Verify everything is running
+### Step 10: Verify everything is running
 
 1. Open the Eureka dashboard: **http://localhost:8761**. You should see `API-GATEWAY`, `AUTHSERVICE`, `PRODUCT-SERVICE`, `CART-SERVICE`, `ORDER-SERVICE`, `COMMENT`, and `MAILSERVICE` listed as **UP**.
-2. Check the auth service health through the gateway is reachable by registering a user (Step 10).
+2. Check the auth service health through the gateway is reachable by registering a user (Step 11).
+3. After you send a few requests, open the Zipkin UI at **http://localhost:9411**, choose `api-gateway` as the service name, and click **Run Query** to see the traces (details in [Distributed Tracing](#-distributed-tracing-zipkin)).
 
-### Step 10: Try it out
+### Step 11: Try it out
 
 All requests go through the gateway at `http://localhost:8765/<service-name>/...`.
 
@@ -784,7 +890,11 @@ curl -X POST http://localhost:8765/product-service/api/admin/addproduct \
   -F "file=@./headphones.jpg"
 ```
 
-### Step 11 (optional): Run the frontend
+**See the trace in Zipkin**
+
+After the login and product requests above, open **http://localhost:9411**, select `api-gateway` under **Service Name**, and click **Run Query**. Open the newest trace to see the request pass through the gateway and the service that handled it, with the time spent in each.
+
+### Step 12 (optional): Run the frontend
 
 Start the React frontend separately on `http://localhost:5173`. The gateway's CORS rules and the OAuth2 success redirect are configured for this exact origin.
 
@@ -794,6 +904,7 @@ Press `Ctrl + C` in each service terminal, then stop the containers:
 
 ```bash
 docker compose -f docker/kafka-compose.yml stop
+docker stop zipkin
 docker compose -f docker/db-compose.yml stop      # only if you used Docker for the databases (Option B)
 ```
 
@@ -902,6 +1013,10 @@ Base URL: `http://localhost:8765`. Paths below include the service prefix used b
 | `Communications link failure` (MySQL) | MySQL is not running or still starting. Check `docker ps` (Option B) or your MySQL service (Option A). |
 | `MongoTimeoutException` / cannot connect to `localhost:27017` | MongoDB is not running. Start the service (Option A) or the `azcart-mongo` container (Option B). |
 | Redis `Connection refused` | Redis is not running on `6379`. Start the `azcart-redis` container. |
+| No traces appear in Zipkin | Zipkin is not running on `9411`, or no request has been sent yet. Check `docker ps`, send a request through the gateway (`:8765`), then click **Run Query**. Traces can take a few seconds to show up. |
+| Logs show errors sending spans to `localhost:9411` | Zipkin is not running or the port is blocked. Start it (Step 8). The services still work; only tracing is affected. |
+| A trace shows only some services | Check that the service has `spring-boot-starter-zipkin` in its `pom.xml` and `management.tracing.sampling.probability = 1.0` in `application.properties`, then rebuild and restart it. The Service Registry is not traced. |
+| Port `9411` is already in use | Map another host port (for example `-p 9412:9411`) and set `management.zipkin.tracing.endpoint` in each service (see Step 8). |
 | `401 Unauthorized` from the gateway | Missing or expired token, or `JWT_SECRET` differs between services. |
 | `Port already in use` | Another process uses that port. Stop it or change `server.port` in that service. |
 | No emails arrive, or `Authentication failed` / `535` errors from Gmail | Use a Gmail **App Password** (2-Step Verification must be on), not your normal password, and check `EMAIL` / `EMAIL_PASSWORD` (Step 5.4). |
@@ -926,7 +1041,7 @@ E-commerce-backend-microservices/
 ├── order-service/        # Orders, Razorpay (8100)
 ├── comment/              # Comments, MongoDB (8060)
 ├── MailService/          # Kafka consumer, email sender (8050)
-├── docker/               # kafka-compose.yml, db-compose.yml (local setup files you create)
+├── docker/               # kafka-compose.yml, db-compose.yml, zipkin-compose.yml (local setup files you create)
 └── README.md
 ```
 
@@ -939,6 +1054,7 @@ Each service follows the same layout: `controller`, `service`, `repository`, `mo
 - **Gateway-level security:** one global filter validates JWTs, refreshes tokens near expiry, and passes `X-User-Id` and `X-User-Role` to downstream services.
 - **Event-driven cleanup:** deleting a user or product publishes a Kafka event, and the cart and comment services clean up their own data.
 - **Caching done carefully:** cache logic lives in separate `*CacheService` classes so Spring's `@Cacheable` / `@CacheEvict` proxies are not bypassed by self-invocation.
+- **Observability:** Micrometer Tracing sends spans from the gateway, services, and Kafka consumers/producers to Zipkin, so one request can be followed end to end.
 - **Resilience:** Resilience4j circuit breakers and time limiters protect service-to-service and mail calls.
 - **Kafka error handling:** consumers use `ErrorHandlingDeserializer`, retry failed messages 3 times with a 3-second backoff, and then publish them to a dead-letter topic so one bad message does not block the topic.
 - **Separate user and admin flows:** distinct entities, endpoints, OTP flows, and OAuth provider tables for users and admins.
@@ -952,7 +1068,7 @@ Each service follows the same layout: `controller`, `service`, `repository`, `mo
 - [ ] CI/CD with GitHub Actions
 - [ ] Unit and integration tests
 - [ ] Centralized configuration (Spring Cloud Config)
-- [ ] Distributed tracing and monitoring
+- [ ] Metrics and centralized log monitoring
 - [ ] Swagger / OpenAPI documentation
 
 ---
