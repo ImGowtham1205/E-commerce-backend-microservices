@@ -12,10 +12,12 @@ import com.example.authservice.service.JwtService;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @AllArgsConstructor
 @RequestMapping("/auth")
+@Slf4j
 public class AccountDeletionController {
 
 	private final JwtService jwtService;
@@ -27,6 +29,8 @@ public class AccountDeletionController {
 		String password = user.getPassword();
 		String token = jwtService.getToken(request);
 		String email = jwtService.extractEmail(token);
+		
+		log.info("Request sent to service layer for to deleting User account deletion: " + email);
 		return accountDeletionService.userAccountDeletion(email, password, token);
 	}
 
@@ -35,6 +39,8 @@ public class AccountDeletionController {
 		String password = admin.getPassword();
 		String token = jwtService.getToken(request);
 		String email = jwtService.extractEmail(token);
+		
+		log.info("Request sent to service layer for to deleting Admin account deletion: " + email);
 		return accountDeletionService.adminAccountDeletion(email, password, token);
 	}
 }

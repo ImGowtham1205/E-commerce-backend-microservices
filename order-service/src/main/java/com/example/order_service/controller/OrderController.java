@@ -22,9 +22,11 @@ import com.razorpay.RazorpayException;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @AllArgsConstructor
+@Slf4j
 public class OrderController {
 	
 	private final OrderService orderService;
@@ -36,17 +38,18 @@ public class OrderController {
 			@RequestBody Map<String,Object> body,HttpServletRequest request){
 		
 		String paymentMethod = body.get("paymentmethod").toString();
-		
 		UserCache user = orderService.fetchUser(request);
-		
 		Products product = productService.fetchProductById(productid);
-
-		String paymentStatus = paymentMethod.equals("COD") ? "NOT_PAID" : "PAID";
-
+		String paymentStatus = "COD".equals(paymentMethod) ? "NOT_PAID" : "PAID";
+		
+		log.info("Request sent to service layer to create order object for product with ID: {} by user: {}", productid, user.getEmail());
 		Orders order = orderService.buildOrder(productid, user, paymentMethod, paymentStatus, null);
 
 		product.setStock(product.getStock() - 1);
+		
+		log.info("Request sent to service layer to place COD order for product with ID: {} by user: {}", productid, user.getEmail());
 		orderService.placeOrder(order,product,user);
+		
 		return ResponseEntity.ok("Product Purchased Successfully");		
 	}
 	
@@ -56,6 +59,7 @@ public class OrderController {
 			@RequestParam(defaultValue = "6") int size){
 		String token = jwtService.getToken(request);
 		long userId = jwtService.extractUserId(token);
+		log.info("Request sent to service layer to fetch orders for user with ID: {}", userId);
 		return orderService.fetchOrderByUser(userId , page , size); 
 	}
 	
@@ -68,6 +72,7 @@ public class OrderController {
 	@DeleteMapping("/api/user/cancelorder/{orderid}")
 	public ResponseEntity<String> cancelOrder(@PathVariable long orderid , HttpServletRequest request) 
 			throws RazorpayException{
+		log.info("Request sent to service layer to cancel order with ID: {}", orderid);
 		orderService.cancelOrder(orderid , request);
 		return ResponseEntity.ok("Order Cancelled Successfully");
 	}

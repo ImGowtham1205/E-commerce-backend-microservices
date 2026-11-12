@@ -18,9 +18,11 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Component
 @AllArgsConstructor
+@Slf4j
 public class JwtFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
@@ -30,9 +32,13 @@ public class JwtFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,HttpServletResponse response,FilterChain filterChain)
             throws ServletException, IOException {
     	
+    	String path = request.getRequestURI();
+    	log.info("Incoming request path in Cart Service : {}", path);
+    	
         String authHeader = request.getHeader("Authorization");
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        	log.warn("Authorization header is missing or does not start with 'Bearer '. Proceeding without authentication in Cart service.");
             filterChain.doFilter(request, response);
             return;
         }
@@ -42,12 +48,14 @@ public class JwtFilter extends OncePerRequestFilter {
         List<String> tokens = tokenservice.getAllBlackListTokens(authHeader);
          
         if(tokens != null && tokens.contains(token)){
-        	response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid JWT");
-            return;
+        	log.warn("Token is blacklisted. Proceeding without authentication in Cart service.");
+			filterChain.doFilter(request, response);
+			return;
         }
                 
         try {
             if (!jwtService.validateToken(token)) {
+            	log.warn("Token validation failed. Proceeding without authentication in Cart service.");
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid JWT");
                 return;
             }
@@ -62,12 +70,16 @@ public class JwtFilter extends OncePerRequestFilter {
             
             authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
             SecurityContextHolder.getContext().setAuthentication(authentication);
-              
+            
+            log.info("Authentication successful for user in Cart service: {}", email);
+            
         } catch (Exception e) {
+        	log.error("Error during JWT processing in Cart service: {}", e.getMessage());
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "JWT Error: " + e.getMessage());
             return;
         }
-
+        
+        log.info("Proceeding with the filter chain in Cart service.");
         filterChain.doFilter(request, response);
     }
 }

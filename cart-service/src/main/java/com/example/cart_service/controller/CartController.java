@@ -18,9 +18,11 @@ import com.example.cart_service.service.CartService;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @AllArgsConstructor
+@Slf4j
 public class CartController {
 	
 	private final CartService cartService;
@@ -31,6 +33,8 @@ public class CartController {
 		String token = jwtService.getToken(request);
 		long userid = jwtService.extractUserId(token);
 		cart.setUserId(userid);
+		
+		log.info("Request sent to service layer to add item to cart for userId: {}", userid);
 		cartService.addCart(cart);
 		return ResponseEntity.ok("Product Added To Cart Successfully");
 	}	
@@ -41,6 +45,8 @@ public class CartController {
 			@RequestParam(defaultValue = "10") int size){
 		String token = jwtService.getToken(request);
 		long userid = jwtService.extractUserId(token);
+		
+		log.info("Request sent to service layer to fetch cart items for userId: {}", userid);
 		return cartService.fetchCartProduct(userid , page , size);
 	}
 	
@@ -50,6 +56,8 @@ public class CartController {
 		id = id.replace("\"", "").trim();
 		ObjectId objectid = new ObjectId(id);
 		Cart deleteItem = cartService.findByObjectId(objectid);
+		
+		log.info("Request sent to service layer to delete cart item with id: {}", id);
 		cartService.deleteCartItemById(deleteItem);	
 		return ResponseEntity.ok("Product Removed From Your Cart Successfully");
 	}
@@ -57,6 +65,8 @@ public class CartController {
 	@PutMapping("/api/user/updatequantity")
 	public ResponseEntity<String> updateQuantity(@RequestBody Cart cart){
 		cart.setQuantity(cart.getQuantity());
+		
+		log.info("Request sent to service layer to update quantity for cart item with id: {}", cart.getId());
 		cartService.updateQuantity(cart);
 		return ResponseEntity.ok("Product Quantity Successfully Updated To Your Cart");
 	}
@@ -65,7 +75,10 @@ public class CartController {
 	public ResponseEntity<Double> getCartTotal(HttpServletRequest request){
 		String token = jwtService.getToken(request);
 		long userid = jwtService.extractUserId(token);
-		return ResponseEntity.ok(cartService.getCartTotal(userid));
+		log.info("Request sent to service layer to get total cart price for userId: {}", userid);
+		Double response = cartService.getCartTotal(userid);
+		log.info("Total cart price for userId {} is: {}", userid, response);
+		return ResponseEntity.ok(response);
 	}
 	
 }

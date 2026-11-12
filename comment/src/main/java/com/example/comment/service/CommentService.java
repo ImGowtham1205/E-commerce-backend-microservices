@@ -15,9 +15,11 @@ import com.example.comment.model.Comment;
 import com.example.comment.repository.CommentRepo;
 
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @AllArgsConstructor
+@Slf4j
 public class CommentService {
 	
 	private final CommentRepo commentRepo;
@@ -25,11 +27,13 @@ public class CommentService {
 	
 	@Cacheable(value = "comment" , key = "'cmtcount:' + #productid" , unless = "#result == null")
 	public long getCommentCountForProduct(long productid) {
+		log.info("Fetching comment count for productid: {}", productid);
 		return commentRepo.countByProductid(productid);
 	}
 	
 	@Cacheable(value = "comment" , key = "'productcmt:' + #productid" , unless = "#result == null")
 	public List<Comment> getCommentForproduct(long productid){
+		log.info("Fetching comments for productid: {}", productid);
 		return commentRepo.findByProductid(productid);
 	}
 	
@@ -76,6 +80,7 @@ public class CommentService {
 	}
 	
 	public Comment fetchCommentById(ObjectId id) {
+		log.info("Fetching comment by id: {}", id);
 		return commentRepo.findById(id)
 				.orElseThrow(()-> new CommentNotFoundException("Comment Not Found . Unable To Delete"));
 	}
@@ -84,6 +89,7 @@ public class CommentService {
 		Cache cache = cacheManager.getCache("comment");
 		
 		if(cache != null) {
+			log.info("Evicting cache for productid: {}", productid);
 			cache.evict("productcmt:" + productid);
 			cache.evict("cmtcount:" + productid);
 		}

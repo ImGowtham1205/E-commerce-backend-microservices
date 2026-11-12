@@ -6,14 +6,18 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.example.authservice.model.AdminCache;
+import com.example.authservice.model.AdminRequest;
 import com.example.authservice.model.Admins;
 import com.example.authservice.model.UserCache;
+import com.example.authservice.model.UserRequest;
 import com.example.authservice.model.Users;
 
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @AllArgsConstructor
+@Slf4j
 public class RegistrationService {
 	
 	private final UsersService userService;
@@ -22,12 +26,16 @@ public class RegistrationService {
 	
 	public void registerUser(Users user) {
 		userService.saveUser(user);
-		mailService.accountCreationMail(user);
+		log.info("User registered successfully with email: {}", user.getEmail());
+		log.info("Sending welcome email to user with email: {}", user.getEmail());
+		mailService.accountCreationMail(new UserRequest(user.getId(),user.getEmail(),user.getName()));
 	}
 	
 	public void registerAdmin(Admins admin) {
 		userService.saveAdmin(admin);
-		mailService.accountCreationMail(admin);
+		log.info("Admin registered successfully with email: {}", admin.getEmail());
+		log.info("Sending welcome email to admin with email: {}", admin.getEmail());
+		mailService.accountCreationMail(new AdminRequest(admin.getId(),admin.getEmail(),admin.getAdminName()));
 	}
 	
 	public boolean existsMailForUser(String mail) {
@@ -59,6 +67,7 @@ public class RegistrationService {
 		user.setAddress(request.get("address"));
 		user.setProfileCompleted(false);
 		user.setRole(request.get("role"));
+		log.info("User object created with email: {}", user.getEmail());
 		return user;
 	}
 	
@@ -69,6 +78,7 @@ public class RegistrationService {
 		admin.setPhoneno(request.get("phoneno"));
 		admin.setPassword(encorder.encode(request.get("password")));
 		admin.setRole(request.get("role"));
+		log.info("Admin object created with email: {}", admin.getEmail());
 		return admin;
 	}
 	

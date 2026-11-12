@@ -23,10 +23,12 @@ import com.example.authservice.service.UsersService;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @AllArgsConstructor
 @RequestMapping("/auth")
+@Slf4j
 public class PasswordController {
 	
 	private final PasswordService passwordService;
@@ -39,11 +41,15 @@ public class PasswordController {
 	public ResponseEntity<String> forgotPassword(@RequestBody Map<String,String> body) {
 		String email = body.get("email");
 		
+		log.info("Request sent To service Layer for forgot password for email: {}", email);
+		
 		ResponseEntity<String> status = passwordService.forgotPassword(email);
 		
-		if(status.getStatusCode() == HttpStatus.NOT_FOUND) 
+		if(status.getStatusCode() == HttpStatus.NOT_FOUND) {
+			log.warn("Email not found for email: {}", email);
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(status.getBody());
-	
+		}
+		
 		return ResponseEntity.status(HttpStatus.OK).body(status.getBody());
 	}
 	
@@ -54,6 +60,7 @@ public class PasswordController {
 		PasswordResetOtp pro = null;
 		AdminPasswordResetOtp apro = null;
 		
+		log.info("Request sent To service Layer for to check reset password otp: {}", otp);
 		pro = passwordOtpService.checkOtp(otp);
 		
 		if(pro == null) {
@@ -67,7 +74,10 @@ public class PasswordController {
 			pro.setStatus("used");
 			user.setPassword(encorder.encode(password));
 			passwordService.changepassword(user);
+			log.info("Password reset successfully for user: {}", user.getEmail());
+			
 			passwordOtpService.savePasswordOtp(pro);
+			log.info("OTP status updated to used for user: {}", user.getEmail());
 		}
 		
 		if(apro != null) {
@@ -75,7 +85,10 @@ public class PasswordController {
 			apro.setStatus("used");
 			admin.setPassword(encorder.encode(password));
 			passwordService.changepassword(admin);
+			log.info("Password reset successfully for admin: {}", admin.getEmail());
+			
 			passwordOtpService.saveAdminPasswordOtp(apro);
+			log.info("OTP status updated to used for admin: {}", admin.getEmail());
 		}
 		
 		return ResponseEntity.status(HttpStatus.OK).body("Password Reset Successfully");
@@ -89,15 +102,10 @@ public class PasswordController {
 		String newPassword = body.get("newpassword");
 				
 		String token = jwtService.getToken(request);
-				
-		if(token == null)
-			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).
-					body("Unauthorized");
-		
 		String email = jwtService.extractEmail(token);
-		
 		Users user = userService.getUserEntity(email);
 		
+		log.info("Request sent To service Layer for to check current password for user: {}", email);
 		if(!(passwordService.checkCurrentPassword(user, currentPassword)))
 			throw new PasswordNotMatchException("Current Password Doesn't Match");
 		
@@ -120,6 +128,7 @@ public class PasswordController {
 		String email = jwtService.extractEmail(token);
 		Admins admin = userService.getAdminEntity(email);
 		
+		log.info("Request sent To service Layer for to check current password for admin: {}", email);
 		if(!(passwordService.checkCurrentPassword(admin, currentPassword)))
 			throw new PasswordNotMatchException("Current Password Doesn't Match");
 		

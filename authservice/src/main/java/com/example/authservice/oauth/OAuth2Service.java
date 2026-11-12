@@ -6,9 +6,11 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @AllArgsConstructor
+@Slf4j
 public class OAuth2Service extends DefaultOAuth2UserService{
 		
 	private final ProcessOAuth2UsersService OAuthUserService;
@@ -21,6 +23,7 @@ public class OAuth2Service extends DefaultOAuth2UserService{
 		String name = OAuthUser.getAttribute("name");
 		String providerid = OAuthUser.getName();
 		
+		log.info("Request sent to service method for processing OAuth2 user with email: {} and provider: {}", email, provider);
 		OAuthUserService.processOAuthUsers(email, name, provider, providerid);
 		
 		return OAuthUser;		

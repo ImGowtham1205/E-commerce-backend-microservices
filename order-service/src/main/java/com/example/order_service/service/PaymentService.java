@@ -16,7 +16,10 @@ import com.razorpay.RazorpayClient;
 import com.razorpay.RazorpayException;
 import com.razorpay.Utils;
 
+import lombok.extern.slf4j.Slf4j;
+
 @Service
+@Slf4j
 public class PaymentService {
 
 	private final OrderService orderService;
@@ -42,6 +45,7 @@ public class PaymentService {
 		String email = jwtService.extractEmail(token);
 		
 		try {
+			log.info("Initiating capture of amount: {} for user: {}", amonut, email);
 			RazorpayClient client = new RazorpayClient(clientid, clientsecret);
 
 			JSONObject obj = new JSONObject();
@@ -50,12 +54,15 @@ public class PaymentService {
 			obj.put("receipt", email + System.currentTimeMillis());
 
 			Order order = client.orders.create(obj);
-
+			log.info("Successfully created Razorpay order with ID: {} for user: {}", order.get("id"), email);
+			
 			Map<String, String> response = new HashMap<>();
 			response.put("id", order.get("id").toString());
 			response.put("amount", order.get("amount").toString());
+			log.info("Returning Razorpay order details for user: {}", email);
 			return response;
 		}catch (RazorpayException e) {
+			log.error("Error occurred while creating Razorpay order for user: {}. Error: {}", email, e.getMessage());
 			e.getMessage();
 			e.printStackTrace();
 			throw e;
@@ -70,22 +77,36 @@ public class PaymentService {
 			String razorpayPaymentId = data.get("razorpay_payment_id");
 			String razorpaySignature = data.get("razorpay_signature");
 			String token = data.get("token");
+			String email = data.get("email");
+			
+			log.info("Verifying payment for Razorpay order ID: {} and payment ID: {} for user: {}", 
+					razorpayOrderId, razorpayPaymentId, email);
 			
 			String payload = razorpayOrderId + "|" + razorpayPaymentId;
 			boolean isValid = Utils.verifySignature(payload, razorpaySignature, clientsecret);
 			
-			if(!isValid)
-	            return "Payment verification failed";
-	        			
+			if(!isValid) {
+				log.warn("Payment verification failed for Razorpay order ID: {} and payment ID: {} for user: {}", 
+						razorpayOrderId, razorpayPaymentId, email);
+				return "Payment verification failed";
+			}
+			
+			log.info("payment verification successful for Razorpay order ID: {} and payment ID: {} for user: {}", 
+					razorpayOrderId, razorpayPaymentId, email);
+			
 			Products product = productService.fetchProductById(productid);
 			UserCache user = authService.userInfo(token);
-
-			Orders order = orderService.buildOrder(productid, user, "RAZORPAY", "PAID",razorpayPaymentId);
+			
+			log.info("Request sent to service layer to create order object for product with ID: {} by user: {}", 
+					productid, email);
+			Orders order = orderService.buildOrder(productid, user, "RAZORPAY", "PAID", razorpayPaymentId);
+			
 			product.setStock(product.getStock() - 1);
 			orderService.placeOrder(order, product, user);
 			return "Payment successful";
 			
 		} catch (RazorpayException e) {
+			log.error("Error occurred while verifying payment. Error: {}", e.getMessage());
 			e.getMessage();
 			e.printStackTrace();
 			return "Payment failed";

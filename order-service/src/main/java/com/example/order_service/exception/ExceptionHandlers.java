@@ -5,6 +5,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import com.razorpay.RazorpayException;
+
 @RestControllerAdvice
 public class ExceptionHandlers {
 
@@ -28,5 +30,11 @@ public class ExceptionHandlers {
 	public ResponseEntity<String> PaymentMisMatchExceptionHandler(PaymentMisMatchException ex){
 		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ex.getMessage());
 	}
+	
+	@ExceptionHandler(RazorpayException.class)
+    public ResponseEntity<String> handleRazorpay(RazorpayException e) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body("Refund failed: " + e.getMessage());
+    }
 	
 }

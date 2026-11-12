@@ -18,9 +18,11 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @AllArgsConstructor
+@Slf4j
 public class OAuthSuccessHandler implements AuthenticationSuccessHandler{
 
 	private final JwtService jwtService;
@@ -37,6 +39,7 @@ public class OAuthSuccessHandler implements AuthenticationSuccessHandler{
 		UserCache user = userService.getUser(email);
 		String role = "ROLE_";
 		long id = 0;
+		
 		if(user == null) {
 			AdminCache admin = userService.getAdmin(email);
 			role += admin.getRole().toUpperCase();
@@ -48,9 +51,9 @@ public class OAuthSuccessHandler implements AuthenticationSuccessHandler{
 		}
 		
 		String token = jwtService.generateToken(email, role ,id);
-		
 		String encodedToken = URLEncoder.encode(token, StandardCharsets.UTF_8);
 		
+		log.info("OAuth2 authentication successful for email: {}. Redirecting to frontend with token and role.", email);
 		response.sendRedirect(FRONTEND_URL + "/oauth-success?token=" + encodedToken + "&role=" + role);	
 	}
 }

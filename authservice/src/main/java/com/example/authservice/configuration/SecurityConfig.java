@@ -44,6 +44,7 @@ public class SecurityConfig {
                         .requestMatchers("/auth/login","/auth/register","/auth/forgot-password","/auth/reset-password",
                         		"/oauth2/**","/login/oauth2/**").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
+                        .requestMatchers("/error").permitAll()
                         .requestMatchers("/auth/api/user/**").hasAuthority("ROLE_USER")
                         .requestMatchers("/auth/api/admin/**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers("/auth/api/gettokens**").hasAnyAuthority("ROLE_USER","ROLE_ADMIN")

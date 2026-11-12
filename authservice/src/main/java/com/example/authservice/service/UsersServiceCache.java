@@ -15,9 +15,11 @@ import com.example.authservice.repository.AdminRepo;
 import com.example.authservice.repository.UserRepo;
 
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @AllArgsConstructor
+@Slf4j
 public class UsersServiceCache {
 	
 	private final UserRepo userRepo;
@@ -38,12 +40,14 @@ public class UsersServiceCache {
     @Cacheable(value = "user", key = "'user:' + #email", unless = "#result == null")
     public UserCache getUser(String email) {
         Users user = userRepo.findByEmail(email); 
+        log.info("Fetching User with email {} from database and caching them", email);
         return userCache(user);
     }
      
     @Cacheable(value = "admin", key = "'admin:' + #email", unless = "#result == null")
     public AdminCache getAdmin(String email) {
         Admins admin = adminRepo.findByEmail(email); 
+        log.info("Fetching Admin with email {} from database and caching them", email);
         return adminCache(admin);
     }
 
@@ -63,14 +67,20 @@ public class UsersServiceCache {
 
         if (existingUser != null && existingUser.getPhoneno() != null
                 && !existingUser.getPhoneno().equals(user.getPhoneno())) {
+        	log.info("Phone number changed for user with email {}. Evicting old phone number from cache.", user.getEmail());
             evictUserByPhone(existingUser.getPhoneno());
         }
-
+        
+        log.info("Fetching User with Phone Number {} from database", user.getPhoneno());
         Users existing = userRepo.findByPhoneno(user.getPhoneno());
-        if (existing != null && existing.getId() != user.getId())
-            throw new PhoneNumberAlreadyExistsException("Phone number already exists for another user");
+        
+        if (existing != null && existing.getId() != user.getId()) {
+        	log.warn("Phone number {} already exists for another user. Cannot update profile.", user.getPhoneno());
+			throw new PhoneNumberAlreadyExistsException("Phone number already exists");
+        }
 
         Users updatedUser = userRepo.save(user);
+        log.info("User with email {} updated successfully. Updating cache.", user.getEmail());
         return userCache(updatedUser);
     }
     
@@ -86,9 +96,12 @@ public class UsersServiceCache {
     )
     public Users deleteByUserEmail(String email) {
         Users user = userRepo.findByEmail(email);
-        if (user == null)
-            return null;
+        if (user == null) {
+        	log.warn("User with email {} not found for deletion", email);
+			return null;
+        }
         userRepo.delete(user);
+        log.info("User with email {} deleted and cache evicted successfully", email);
         return user;
     }
     
@@ -100,9 +113,12 @@ public class UsersServiceCache {
 	)
     public Admins deleteByAdminEmail(String email) {
         Admins admin = adminRepo.findByEmail(email);
-        if (admin == null)
-            return null;
+        if (admin == null) {
+        	log.warn("Admin with email {} not found for deletion", email);
+			return null;
+        }
         adminRepo.delete(admin);
+        log.info("Admin with email {} deleted and cache evicted successfully", email);
         return admin;
     }
     

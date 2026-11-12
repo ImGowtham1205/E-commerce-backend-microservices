@@ -12,7 +12,7 @@ import lombok.Setter;
 public class OrdersRequest {
 	
 	private Products product;
-	private UserCache user; 
+	private UserCache user;
 	private Orders order;
 	
 }

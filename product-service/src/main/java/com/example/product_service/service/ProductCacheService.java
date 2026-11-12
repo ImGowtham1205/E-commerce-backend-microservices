@@ -11,9 +11,11 @@ import com.example.product_service.projection.ProductView;
 import com.example.product_service.repository.ProductRepo;
 
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @AllArgsConstructor
+@Slf4j
 public class ProductCacheService {
 	
 	private final ProductRepo productRepo;

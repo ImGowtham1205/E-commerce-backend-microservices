@@ -6,9 +6,11 @@ import org.springframework.stereotype.Component;
 import com.example.cart_service.service.CartService;
 
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Component
 @AllArgsConstructor
+@Slf4j
 public class CartEventListener {
 	
 	private final CartService cartService;
@@ -16,13 +18,13 @@ public class CartEventListener {
 	@KafkaListener(topics = "user.deleted", groupId = "cart-service-group")
 	public void deleteUserCartItems(long userid) {
 		cartService.deleteUserCartItems(userid);
-		System.out.println("User Cart Deleted Records is Successfully For UserId : " +userid);
+		log.info("User Cart Deleted Records is Successfully For UserId : " +userid);
 	}
 	
 	@KafkaListener(topics = "product.deleted", groupId = "cart-service-group")
 	public void deleteCartItemsByProductId(long productid) {
 		cartService.deleteCartItemsByProductId(productid);
-		System.out.println("Product Cart Deleted Records is Successfully For All User , "
+		log.info("Product Cart Deleted Records is Successfully For All User , "
 				+ "Deleted ProductID : " +productid);
 	}
 	

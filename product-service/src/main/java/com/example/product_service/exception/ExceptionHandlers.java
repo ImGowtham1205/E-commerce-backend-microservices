@@ -7,11 +7,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import lombok.extern.slf4j.Slf4j;
+
 @RestControllerAdvice
+@Slf4j
 public class ExceptionHandlers {
 
 	@ExceptionHandler(IOException.class)
 	public ResponseEntity<String> imageUploadExceptionHandling(){
+		log.error("Image upload exception occurred");
 		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to add product image");
 	}
 	

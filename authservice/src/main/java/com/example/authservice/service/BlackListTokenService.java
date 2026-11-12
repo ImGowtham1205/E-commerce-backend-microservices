@@ -11,9 +11,11 @@ import com.example.authservice.model.BlackListedToken;
 import com.example.authservice.repository.BlackListTokenRepo;
 
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @AllArgsConstructor
+@Slf4j
 public class BlackListTokenService {
 	
 	private final BlackListTokenRepo tokenRepo;
@@ -26,6 +28,7 @@ public class BlackListTokenService {
 	
 	@Cacheable(value = "blacklisttokens", key = "'all'")
 	public List<String> getAllBlackListTokens(){
+		log.info("Fetching all blacklisted tokens from database and caching them");
 		return tokenRepo.fetchAllTokens();
 	}
 	
@@ -38,6 +41,7 @@ public class BlackListTokenService {
 		BlackListedToken b = new BlackListedToken();
 		b.setToken(token);
 		b.setExiprytime(jwtService.extractExpiration(token));
+		log.info("Token blacklisted : " + token + "and evicted from cache successfully");
 		tokenRepo.save(b);
 	}
 }

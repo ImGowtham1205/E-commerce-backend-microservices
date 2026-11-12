@@ -18,7 +18,7 @@ public class SecurityConfig {
 	@Bean
 	SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
 	    return http
-	    	.cors(cors->cors.configurationSource(corsConfigurationSource()))
+	    	.cors(cors -> cors.configurationSource(corsConfigurationSource()))
 	        .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
 	        .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
 	        .csrf(ServerHttpSecurity.CsrfSpec::disable)
@@ -30,9 +30,9 @@ public class SecurityConfig {
 	            		"/authservice/auth/forgot-password","/authservice/auth/reset-password").permitAll()
 	            .pathMatchers("/authservice/oauth2/**","/authservice/login/oauth2/**").permitAll()
 	            .pathMatchers("/actuator/**").permitAll()
+	            .pathMatchers("/error").permitAll()
 	            .anyExchange().permitAll()
-	        )
-	        .build();
+	        ).build();
 	}
 
 	@Bean

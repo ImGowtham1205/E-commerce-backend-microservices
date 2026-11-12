@@ -6,13 +6,17 @@ import org.springframework.stereotype.Service;
 import com.example.authservice.model.AdminOAuthProviders;
 import com.example.authservice.model.Admins;
 import com.example.authservice.model.OAuthProviders;
+import com.example.authservice.model.UserRequest;
 import com.example.authservice.model.Users;
 import com.example.authservice.repository.AdminOAuthProvidersRepo;
 import com.example.authservice.repository.OAuthProvidersRepo;
 import com.example.authservice.service.MailService;
 import com.example.authservice.service.UsersService;
 
+import lombok.extern.slf4j.Slf4j;
+
 @Service
+@Slf4j
 public class ProcessOAuth2UsersService {
 
 	 private final UsersService userService;
@@ -39,14 +43,20 @@ public class ProcessOAuth2UsersService {
  			newuser.setAddress(null);
  			newuser.setPassword(null);
  			newuser.setProfileCompleted(true);
- 			Users saveduser = userService.saveUser(newuser);
+ 			Users savedUser = userService.saveUser(newuser);
  			
- 			OAuthProviders oauthprovider = new OAuthProviders();
- 			oauthprovider.setProvider(provider);
- 			oauthprovider.setProviderid(providerid);
- 			oauthprovider.setUserid(saveduser);
- 			OAuthRepo.save(oauthprovider);
- 			mailService.accountCreationMail(saveduser);
+ 			log.info("New user created with email: {} and provider: {}", email, provider);
+ 			
+ 			OAuthProviders OAuthProvider = new OAuthProviders();
+ 			OAuthProvider.setProvider(provider);
+ 			OAuthProvider.setProviderid(providerid);
+ 			OAuthProvider.setUserid(savedUser);
+ 			OAuthRepo.save(OAuthProvider);
+ 			
+ 			log.info("OAuth provider details saved for user with email: {} and provider: {}", email, provider);
+ 			log.info("Sending welcome email to user with email: {}", email);
+ 			
+ 			mailService.accountCreationMail(new UserRequest(savedUser.getId(),savedUser.getEmail(),savedUser.getName()));
  		}
          
          else {
@@ -54,6 +64,9 @@ public class ProcessOAuth2UsersService {
         	 if(user != null) {
          		user.setName(name);
       			userService.saveUser(user);
+      			
+      			log.info("Existing user updated with email: {} and provider: {}", email, provider);
+      			log.info("Checking if OAuth provider details already exist for user with email: {} and provider: {}", email, provider);
       			
       			OAuthProviders existProvider = OAuthRepo.findByProviderAndProviderid(provider, providerid);
       			if(existProvider == null) {
@@ -64,11 +77,18 @@ public class ProcessOAuth2UsersService {
                       OAuthProvider.setUserid(user);
 
                       OAuthRepo.save(OAuthProvider);
+                      log.info("OAuth provider details saved for existing user with email: {} and provider: {}", email, provider);
       			}
          	}
         	 
         	 else if(admin != null) {
-				 AdminOAuthProviders existProvider = adminOAuthProviderRepo.findByProviderAndProviderid(provider, providerid);
+        		 admin.setAdminName(name);
+        		 
+        		 userService.saveAdmin(admin);
+        		 log.info("Existing admin updated with email: {} and provider: {}", email, provider);
+        		 log.info("Checking if OAuth provider details already exist for admin with email: {} and provider: {}", email, provider);
+				 
+        		 AdminOAuthProviders existProvider = adminOAuthProviderRepo.findByProviderAndProviderid(provider, providerid);
 				 if(existProvider == null) {
 					 AdminOAuthProviders oauthprovider = new AdminOAuthProviders();
 					 oauthprovider.setProvider(provider);
@@ -76,6 +96,7 @@ public class ProcessOAuth2UsersService {
 					 oauthprovider.setAdminid(admin);
 
 					 adminOAuthProviderRepo.save(oauthprovider);
+					 log.info("OAuth provider details saved for existing admin with email: {} and provider: {}", email, provider);
 				 }
 			 }
  		}

@@ -9,10 +9,12 @@ import com.example.authservice.service.JwtService;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @AllArgsConstructor
 @RequestMapping("/auth")
+@Slf4j
 public class LogoutController {
 	
 	private final JwtService jwtService;
@@ -21,12 +23,16 @@ public class LogoutController {
 	@PostMapping("/api/user/logout")
 	public void userLogout(HttpServletRequest request) {
 		String token = jwtService.getToken(request);
+		
+		log.info("Request sent To service Layer for blacklisting the token");
 		blackListTokenService.blackListToken(token);
 	}
 	
 	@PostMapping("/api/admin/logout")
 	public void adminLogout(HttpServletRequest request) {
 		String token = jwtService.getToken(request);
+		
+		log.info("Request sent To service Layer for blacklisting the token");
 		blackListTokenService.blackListToken(token);
 	}
 }

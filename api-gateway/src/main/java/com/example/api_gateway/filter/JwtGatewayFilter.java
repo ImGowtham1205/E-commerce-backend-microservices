@@ -16,30 +16,30 @@ import io.github.resilience4j.ratelimiter.RateLimiter;
 import io.github.resilience4j.ratelimiter.RateLimiterRegistry;
 import io.github.resilience4j.ratelimiter.RequestNotPermitted;
 import io.github.resilience4j.reactor.ratelimiter.operator.RateLimiterOperator;
+import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
 
 @Component
+@AllArgsConstructor
+@Slf4j
 public class JwtGatewayFilter implements GlobalFilter,Ordered { 
 
 	private final JwtService jwtService;
 	private final RateLimiterRegistry rateLimiterRegistry;
 		
-	public JwtGatewayFilter(JwtService jwtService ,RateLimiterRegistry rateLimiterRegistry) {
-		this.jwtService = jwtService;
-		this.rateLimiterRegistry = rateLimiterRegistry;
-	}
-
 	@Override
 	public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
 
 	    String path = exchange.getRequest().getURI().getPath();
-	    
+	    log.info("Request path in API Gateway: {}", path);
 	    if (path.startsWith("/oauth2") || path.startsWith("/login/oauth2") ||
 	        path.contains("/auth/login") || path.contains("/auth/register") ||
 	        path.contains("/auth/forgot-password") || path.contains("/auth/reset-password") ||
 	        path.startsWith("/api/products/image") ||  path.startsWith("/actuator")) {
 	    	
 	    	String Key = "ip:" + getClientIpAddress(exchange);
+	    	log.info("Public API request from IP in API Gateway: {}", Key);
 	        return withRateLimit(exchange, chain, Key, "Public-Api");
 	    }
 
@@ -47,6 +47,7 @@ public class JwtGatewayFilter implements GlobalFilter,Ordered {
 
 	    if (authHeader == null || !authHeader.startsWith("Bearer ")) {
 	        exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+	        log.warn("Unauthorized request: Missing or invalid Authorization header in API Gateway");
 	        return exchange.getResponse().setComplete();
 	    }
 
@@ -54,6 +55,7 @@ public class JwtGatewayFilter implements GlobalFilter,Ordered {
 
 	    if (!jwtService.isValid(token)) {
 	        exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+	        log.warn("Unauthorized request: Invalid Or Expired JWT token in API Gateway");
 	        return exchange.getResponse().setComplete();
 	    }
 
@@ -61,13 +63,10 @@ public class JwtGatewayFilter implements GlobalFilter,Ordered {
 
 	    if (exchange.getAttribute("REFRESH_DONE") == null &&
 	        jwtService.willExpireSoon(token, 1)) {
-	    	
 	        finalToken = jwtService.refreshToken(token);
-
-	        exchange.getResponse().getHeaders()
-	                .set("X-Auth-Token", "Bearer " + finalToken);
-
+	        exchange.getResponse().getHeaders().set("X-Auth-Token", "Bearer " + finalToken);
 	        exchange.getAttributes().put("REFRESH_DONE", true);
+	        log.info("JWT token refreshed for Id and role in API Gateway: {}", jwtService.extractUserId(finalToken), jwtService.extractRole(finalToken));
 	    }
 
 	    Long userId = jwtService.extractUserId(finalToken);
@@ -80,8 +79,8 @@ public class JwtGatewayFilter implements GlobalFilter,Ordered {
 	            .build();
 	    
 	    String Key = role + userId;
+	    log.info("Protected API request from userId: {} with role in API Gateway: {}", userId, role);
 	    return withRateLimit(exchange.mutate().request(mutatedRequest).build(), chain, Key, "Protected-Api");
-	    
 	}
 	
 	private Mono<Void> withRateLimit(ServerWebExchange exchange, GatewayFilterChain chain, String key, String configName){

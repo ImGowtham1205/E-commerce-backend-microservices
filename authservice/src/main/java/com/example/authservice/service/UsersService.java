@@ -47,10 +47,12 @@ public class UsersService implements UserDetailsService {
     }
     
     public Users getUserEntity(String email) {
+    	log.info("Fetching user for email : {}", email);
         return userRepo.findByEmail(email);
     }
     
     public Admins getAdminEntity(String email) {
+    	log.info("Fetching admin for email : {}", email);
         return adminRepo.findByEmail(email);
     }
     
@@ -67,22 +69,27 @@ public class UsersService implements UserDetailsService {
      }
     
     public UserCache getUser(String email) {
+       log.info("Fetching user by email request sent to cache method: {}", email);
        return usersServiceCache.getUser(email);
     }
      
     public AdminCache getAdmin(String email) {
+    	log.info("Fetching Admin by email request sent to cache method: {}", email);
         return usersServiceCache.getAdmin(email);
     }
 
     public UserCache updateUserProfile(Users user) {
+    	log.info("Updating user Profile request sent to cache method: {}", user.getEmail());
         return usersServiceCache.updateUserProfile(user);
     }
      
     public Users deleteByUserEmail(String email) {
+    	log.info("Deleting user by email request sent to cache method: {}", email);
         return usersServiceCache.deleteByUserEmail(email);
     }
     
     public Admins deleteByAdminEmail(String email) {
+    	log.info("Deleting admin by email request sent to cache method: {}", email);
         return usersServiceCache.deleteByAdminEmail(email);
     }
      

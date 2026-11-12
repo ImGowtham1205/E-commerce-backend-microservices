@@ -11,7 +11,7 @@ import lombok.Setter;
 @AllArgsConstructor
 public class UserForgotPasswordRequest {
 	
-    private Users user;
+    private UserRequest user;
     private String otp;
     
 }

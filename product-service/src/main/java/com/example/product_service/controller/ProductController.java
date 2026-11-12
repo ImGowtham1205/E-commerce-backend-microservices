@@ -23,10 +23,12 @@ import com.example.product_service.projection.ProductView;
 import com.example.product_service.service.ProductService;
 
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @AllArgsConstructor
 @RequestMapping("/api")
+@Slf4j
 public class ProductController {
 	
 	private final ProductService productService;
@@ -39,6 +41,7 @@ public class ProductController {
 			product.setImagedata(file.getBytes());
 			productService.addProduct(product);
 			
+			log.info("Product added successfully with name: {}", product.getProductname());
 			return ResponseEntity.status(HttpStatus.OK).body("Product Added Successfully");
 	}
 	
@@ -46,6 +49,7 @@ public class ProductController {
 	public ResponseEntity<String> updateProduct(@RequestPart Products product , 
 			@RequestPart(required = false) MultipartFile file) throws IOException{
 			if(file != null && !file.isEmpty()) {
+				log.info("Updating product with new image: {}", product.getProductname());
 				product.setImagename(file.getOriginalFilename());
 				product.setImagetype(file.getContentType());
 				product.setImagedata(file.getBytes());
@@ -53,12 +57,14 @@ public class ProductController {
 			
 			productService.updateProduct(product);
 			
+			log.info("Product updated successfully with name: {}", product.getProductname());
 			return ResponseEntity.status(HttpStatus.OK).body("Product Updated Successfully");
 	}
 	
 	@DeleteMapping("/admin/deleteproduct/{id}")
 	public ResponseEntity<String> deleteProduct(@PathVariable long id){
 		productService.deleteProduct(id);
+		log.info("Product deleted successfully with id: {}", id);
 		return ResponseEntity.status(HttpStatus.OK).body("Product Deleted Successfully");
 	}
 	
@@ -71,13 +77,18 @@ public class ProductController {
 	
 	@GetMapping("/products/details/{id}")
 	public Products fetchProductById(@PathVariable long id) {
-		return productService.getProductById(id);
+		Products product = productService.getProductById(id);
+
+		log.info("Fetched product details for id: {}", id);
+		return product;
 	}
 	
 	@GetMapping("/products/image/{id}")
 	public ResponseEntity<byte[]> getProductImage(@PathVariable long id){
 		Products product = productService.getProductById(id);
 		byte[] imagedata = product.getImagedata();
+		
+		log.info("Fetched product image for id: {}", id);
 		return ResponseEntity.ok()
 				.contentType(MediaType.valueOf(product.getImagetype()))
 				.body(imagedata);
@@ -93,6 +104,8 @@ public class ProductController {
 	@PutMapping("/updatestock")
 	public ResponseEntity<String> updateStock(@RequestBody Products product) {
 		productService.updateProduct(product);
+		
+		log.info("Stock updated for product id: {}", product.getId());
 		return ResponseEntity.ok("Stock Updated Successfully for Product ID : " + product.getId());
 	}
 }

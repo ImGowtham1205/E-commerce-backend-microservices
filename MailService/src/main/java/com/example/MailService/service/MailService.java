@@ -4,11 +4,11 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
-import com.example.MailService.model.Admins;
+import com.example.MailService.model.AdminRequest;
 import com.example.MailService.model.Orders;
 import com.example.MailService.model.Products;
 import com.example.MailService.model.UserCache;
-import com.example.MailService.model.Users;
+import com.example.MailService.model.UserRequest;
 
 import lombok.AllArgsConstructor;
 
@@ -18,7 +18,7 @@ public class MailService {
 	
 	private final JavaMailSender sender;
 	
-	public void accountCreationMail(Users user) {
+	public void accountCreationMail(UserRequest user) {
 		
 		String subject = "Welcome to AzCart – Your Account Has Been Created Successfully 🎉";
 		String receiver = user.getEmail();
@@ -45,7 +45,7 @@ public class MailService {
 		send(receiver, subject, body);
 	}
 	
-	public void forgotPasswordMail(Users user,String otp) {
+	public void forgotPasswordMail(UserRequest user,String otp) {
 		String subject = "AZCART – Reset Your Password";
 		String receiver =  user.getEmail();
 		String url = "http://localhost:5173/reset-password";
@@ -78,12 +78,12 @@ public class MailService {
 		send(receiver, subject, body);
 	}
 	
-	public void forgotPasswordMail(Admins admin,String otp) {
+	public void forgotPasswordMail(AdminRequest admin,String otp) {
 		
 		String subject = "AZCART – Reset Your Password";
 		String receiver =  admin.getEmail();
 		String url = "http://localhost:5173/reset-password";
-		String body = "Hello "+admin.getAdminName()+",\r\n"
+		String body = "Hello "+admin.getName()+",\r\n"
 				+ "\r\n"
 				+ "We received a request to reset your AZCART account password.\r\n"
 				+ "\r\n"
@@ -112,7 +112,7 @@ public class MailService {
 		send(receiver, subject, body);
 	}
 
-	public void userAccountDeletionMail(Users user) {
+	public void userAccountDeletionMail(UserRequest user) {
 			
 		String subject = "Confirmation of Account Deletion";
 		String reciever = user.getEmail();
@@ -135,11 +135,11 @@ public class MailService {
 		send(reciever, subject, body);
 	}
 	
-	public void adminAccountDeletionMail(Admins admin) {
+	public void adminAccountDeletionMail(AdminRequest admin) {
 	
 		String subject = "Admin Account Deletion Notification";
 		String receiver = admin.getEmail();
-		String body = "Dear Administrator "+admin.getAdminName()+",\r\n"
+		String body = "Dear Administrator "+admin.getName()+",\r\n"
 				+ "\r\n"
 				+ "This email is to inform you that a user account has been successfully deleted from the system following a valid deletion request.\r\n"
 				+ "\r\n"
@@ -162,7 +162,7 @@ public class MailService {
 		
 		String subject = "Order Confirmation – Your Order Has Been Successfully Placed";
 		String receiver = user.getEmail();
-		String body = "Dear "+user.getName()+",\r\n"
+		String body = "Dear " + user.getName()+",\r\n"
 				+ "\r\n"
 				+ "Thank you for shopping with AzCart. We are pleased to confirm that your order has been successfully placed and is currently being processed.\r\n"
 				+ "\r\n"
@@ -188,11 +188,11 @@ public class MailService {
 		send(receiver, subject, body);
 	}
 	
-	public void adminAccountCreationMail(Admins admin) {
+	public void adminAccountCreationMail(AdminRequest admin) {
 		
 		String subject = "Welcome to AzCart Admin Panel – Account Created Successfully 🎉";
 		String receiver = admin.getEmail();
-		String body = "Dear "+admin.getAdminName()+",\r\n"
+		String body = "Dear "+admin.getName()+",\r\n"
 				+ "\r\n"
 				+ "Welcome to the AzCart Admin Panel!\r\n"
 				+ "\r\n"

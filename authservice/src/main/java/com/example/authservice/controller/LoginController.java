@@ -20,10 +20,12 @@ import com.example.authservice.service.JwtService;
 import com.example.authservice.service.UsersService;
 
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @AllArgsConstructor
 @RequestMapping("/auth")
+@Slf4j
 public class LoginController {
 
 	private final AuthenticationService authService;
@@ -50,8 +52,12 @@ public class LoginController {
 			}	
 			
 			String token = jwtService.generateToken(email, role ,userid);
+			
+			log.info("User logged in successfully with email and role: " + email + " , " + role);
 			return ResponseEntity.ok(Map.of("token", token, "role", role));
 		}
+		
+		log.warn("Authentication failed for user : {}", user.getEmail());
 		return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
 				.body(Map.of("message", "Invalid email or password"));
 	}

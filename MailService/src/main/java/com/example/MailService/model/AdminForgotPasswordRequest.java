@@ -12,6 +12,6 @@ import lombok.Setter;
 public class AdminForgotPasswordRequest {
 	
 	private String otp;
-	private Admins admin;
+	private AdminRequest admin;
 	
 }

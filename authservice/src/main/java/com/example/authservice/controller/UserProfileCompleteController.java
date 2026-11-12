@@ -15,10 +15,12 @@ import com.example.authservice.service.UsersService;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @AllArgsConstructor
 @RequestMapping("/auth")
+@Slf4j
 public class UserProfileCompleteController {
 
 	private final JwtService jwtService;
@@ -40,6 +42,7 @@ public class UserProfileCompleteController {
 		user.setPhoneno(phoneno);
 		user.setPassword(encorder.encode(password));
 		user.setProfileCompleted(false);
+		log.info("Request sent To service Layer for completing user profile for email: {}", email);
 		return userService.updateUserProfile(user);
 	}
 	

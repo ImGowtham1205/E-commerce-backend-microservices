@@ -14,8 +14,11 @@ import com.example.authservice.model.Admins;
 import com.example.authservice.model.Users;
 import com.example.authservice.service.RegistrationService;
 
+import lombok.extern.slf4j.Slf4j;
+
 @RestController
 @RequestMapping("/auth")
+@Slf4j
 public class RegistrationController {
 	
 	private final RegistrationService registrationService;
@@ -34,19 +37,25 @@ public class RegistrationController {
 		Users user = null;
 		Admins admin = null;
 		
-		if(!role.equals("USER") && !role.equals("ADMIN"))
+		if(!"USER".equals(role) && !"ADMIN".equals(role)) {
+			log.warn("Invalid role provided: {}", role);
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid role");
-		
+		}
+			
 		if(role.equals("USER")) {
 			
 			user = registrationService.createUser(request);
 			
-			if(registrationService.existsMailForUser(user.getEmail()))
+			if(registrationService.existsMailForUser(user.getEmail())) {
+				log.warn("Email already exists for user: {}", user.getEmail());
 				return ResponseEntity.status(HttpStatus.CONFLICT).body("Email already exists");
-			
-			if(registrationService.existsPhoneNoForUser(user.getPhoneno()))
+			}
+				
+			if(registrationService.existsPhoneNoForUser(user.getPhoneno())) {
+				log.warn("Phone number already exists for user: {}", user.getPhoneno());
 				return ResponseEntity.status(HttpStatus.CONFLICT).body("Phone number already exists");
-			
+			}
+
 			registrationService.registerUser(user);
 		}
 		
@@ -54,18 +63,23 @@ public class RegistrationController {
 			
 			String adminKey = request.get("adminkey");
 			
-			if(!ADMIN_KEY.equals(adminKey))
-				return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-						.body("Invalid Admin Key , Cannot create admin account");
-			else
-				admin = registrationService.createAdmin(request);
+			if(!ADMIN_KEY.equals(adminKey)) {
+				log.warn("Invalid admin key provided for admin registration");
+				return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Admin Key , Cannot create admin account");
+			}
 			
-			if(registrationService.existsMailForAdmin(admin.getEmail()))
+			admin = registrationService.createAdmin(request);
+			
+			if(registrationService.existsMailForAdmin(admin.getEmail())) {
+				log.warn("Email already exists for admin: {}", admin.getEmail());
 				return ResponseEntity.status(HttpStatus.CONFLICT).body("Email already exists");
-			
-			if(registrationService.existsPhoneNoForAdmin(admin.getPhoneno()))
+			}
+				
+			if(registrationService.existsPhoneNoForAdmin(admin.getPhoneno())) {
+				log.warn("Phone number already exists for admin: {}", admin.getPhoneno());
 				return ResponseEntity.status(HttpStatus.CONFLICT).body("Phone number already exists");
-			
+			}
+				
 			registrationService.registerAdmin(admin);
 		}
 		return ResponseEntity.status(HttpStatus.CREATED)

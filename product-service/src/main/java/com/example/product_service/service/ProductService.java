@@ -17,9 +17,11 @@ import com.example.product_service.projection.ProductView;
 import com.example.product_service.repository.ProductRepo;
 
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @AllArgsConstructor
+@Slf4j
 public class ProductService {
 
     private final ProductRepo productRepo;
@@ -29,23 +31,31 @@ public class ProductService {
     public Page<ProductView> fetchProductsByCategory(String category, int page, int size) {
         List<ProductView> content = productCacheService.fetchProductsByCategoryList(category, page, size);
         long total = productCacheService.fetchCategoryCount(category);
+        
+        log.info("Fetched {} products for category: {}", content.size(), category);
         return new PageImpl<>(content, PageRequest.of(page, size), total);
     }
 
     public Page<ProductView> fetchAllProducts(int page, int size) {
         List<ProductView> content = productCacheService.fetchAllProductsList(page, size);
         long total = productCacheService.fetchAllCount();
+        
+        log.info("Fetched {} products in total", content.size());
         return new PageImpl<>(content, PageRequest.of(page, size), total);
     }
 
     @Cacheable(value = "product-id", key = "'product:' + #id")
     public Products getProductById(long id) {
         return productRepo.findById(id)
-                .orElseThrow(() -> new ProductNotFoundException("Product Not Found.."));
+                .orElseThrow(() -> {
+                	log.error("Product not found with id: {}", id);
+					return new ProductNotFoundException("Product not found with id: {}" + id);
+				});
     }
-
+    
     @CacheEvict(value = "products", allEntries = true)
     public Products addProduct(Products product) {
+    	log.info("Adding product with name and updating cache: {}", product.getProductname());
         return productRepo.save(product);
     }
     
@@ -58,8 +68,13 @@ public class ProductService {
     			}
     		)
     public Products updateProduct(Products product) {
+    	log.info("Adding product with name and updating cache: {}", product.getProductname());
         productRepo.findById(product.getId())
-                .orElseThrow(() -> new ProductNotFoundException("Product Not Found.."));
+                .orElseThrow(() -> { 
+                	log.error("Product not found for update with id: {}", product.getId());
+					return new ProductNotFoundException("Product Not Found..");
+				});
+                
         return productRepo.save(product);
     }
 
@@ -71,7 +86,10 @@ public class ProductService {
 		)
     public Products deleteProduct(long id) {
         Products product = productRepo.findById(id)
-                .orElseThrow(() -> new ProductNotFoundException("Product Not Found.."));
+        		.orElseThrow(() -> { 
+                	log.error("Product not found for deletion with id: {}", id);
+					return new ProductNotFoundException("Product Not Found..");
+				});
         productCleanUpService.deleteCart(id);
         productCleanUpService.deleteComment(id);
         productRepo.deleteById(id);

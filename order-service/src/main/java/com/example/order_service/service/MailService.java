@@ -9,9 +9,11 @@ import com.example.order_service.model.Products;
 import com.example.order_service.model.UserCache;
 
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @AllArgsConstructor
+@Slf4j
 public class MailService {
 	
 	private final KafkaTemplate<Long, Object> kafkaTemplate;
@@ -21,11 +23,11 @@ public class MailService {
 		kafkaTemplate.send("order.created",order.getOrderid(),orderRequest)
 			.whenComplete((result,ex) -> {
 				if(ex != null)
-					System.err.println("Failed To Send Order Created Event For Email : "+user.getEmail()
-						+" To MailService : " + ex.getMessage());
+					log.error("Failed To Send Order Created Event For Email : " + user.getEmail()
+						+ " To MailService : " + ex.getMessage());
 				else
-					System.out.println("Order Created Event is Acutally Delivered For Email : "+user.getEmail()
-							+" To MailService Partition : " + result.getRecordMetadata().partition());
+					log.info("Order Created Event is Acutally Delivered For Email : " 
+							+user.getEmail() + " To MailService Partition : " + result.getRecordMetadata().partition());
 		});
 		
 	}
@@ -35,10 +37,10 @@ public class MailService {
 		kafkaTemplate.send("order.cancelled",order.getOrderid(),orderRequest)
 			.whenComplete((result,ex) -> {
 				if(ex != null)
-					System.err.println("Failed To Send Order Cancelled Event For Email : "+user.getEmail()
+					log.error("Failed To Send Order Cancelled Event For Email : "+user.getEmail()
 						+" To MailService : " + ex.getMessage());
 				else
-					System.out.println("Order Cancelled Event is Acutally Delivered For Email : "+user.getEmail()
+					log.info("Order Cancelled Event is Acutally Delivered For Email : "+user.getEmail()
 							+" To MailService Partition : " + result.getRecordMetadata().partition());
 		});
 		
