@@ -2,11 +2,11 @@
 
 AzCart is an e-commerce backend built as **Spring Boot microservices**. It handles authentication (JWT + Google/Amazon OAuth2), product catalog, cart, orders with **Razorpay** payments, product comments, and email notifications, with separate **USER** and **ADMIN** roles.
 
-Services talk to each other through **OpenFeign** (synchronous) and **Apache Kafka** (asynchronous events), are discovered through **Eureka**, and are exposed through a single **Spring Cloud API Gateway** that validates JWTs. Requests are traced across services with **Micrometer Tracing** and **Zipkin**.
+Services talk to each other through **OpenFeign** (synchronous) and **Apache Kafka** (asynchronous events), are discovered through **Eureka**, and are exposed through a single **Spring Cloud API Gateway** that validates JWTs. Requests are traced across services with **Micrometer Tracing** and **Zipkin**, and logs from every service are collected in **Grafana** (Loki and Alloy).
 
 > **Status:** Under active development. It runs locally; it is not deployed yet.
 > **Frontend:** The React frontend is not part of this repository. It is expected at `http://localhost:5173`.
-> FrontEnd Repository For This Project : https://github.com/ImGowtham1205/E-Commerce-Frontend.git
+>  FrontEnd Repository For This Project : https://github.com/ImGowtham1205/E-Commerce-Frontend.git
 
 ---
 
@@ -18,6 +18,7 @@ Services talk to each other through **OpenFeign** (synchronous) and **Apache Kaf
 - [Features](#-features)
 - [Kafka Events](#-kafka-events)
 - [Distributed Tracing (Zipkin)](#-distributed-tracing-zipkin)
+- [Centralized Logging (Grafana)](#-centralized-logging-grafana)
 - [Run Locally (Step by Step)](#-run-locally-step-by-step)
 - [Environment Variables](#-environment-variables)
 - [API Reference](#-api-reference)
@@ -61,7 +62,7 @@ Services talk to each other through **OpenFeign** (synchronous) and **Apache Kaf
 
 Every request goes through the gateway, which checks the `Authorization: Bearer <token>` header, refreshes tokens that are close to expiring (returned in the `X-Auth-Token` response header), and forwards the user's id and role to downstream services.
 
-All services except the Service Registry also send trace data to **Zipkin** (`localhost:9411`), so you can follow one request across the gateway, the services, and Kafka. See [Distributed Tracing](#-distributed-tracing-zipkin).
+All services except the Service Registry also send trace data to **Zipkin** (`localhost:9411`), so you can follow one request across the gateway, the services, and Kafka. See [Distributed Tracing](#-distributed-tracing-zipkin). Their JSON log files are shipped to **Grafana Loki** by **Grafana Alloy**, so logs from all services can be searched in one place. See [Centralized Logging](#-centralized-logging-grafana).
 
 ---
 
@@ -78,6 +79,9 @@ All services except the Service Registry also send trace data to **Zipkin** (`lo
 | Comment Service | `comment` | 8060 | MongoDB `comment-db` | Add/update/delete/list product comments |
 | Mail Service | `MailService` | 8050 | – | Consumes Kafka events and sends emails through Gmail SMTP |
 | Zipkin | Docker image `openzipkin/zipkin` | 9411 | In memory | Collects and shows distributed traces |
+| Grafana Loki | Docker image `grafana/loki` | 3100 | Docker volume | Stores centralized logs |
+| Grafana Alloy | Docker image `grafana/alloy` | 12345 | – | Reads service log files and ships them to Loki |
+| Grafana | Docker image `grafana/grafana` | 3000 | Docker volume | UI to search and view logs |
 
 Redis (`localhost:6379`) is used for caching by the gateway, auth, product, cart, order, and comment services.
 
@@ -94,7 +98,7 @@ Redis (`localhost:6379`) is used for caching by the gateway, auth, product, cart
 - **Caching:** Redis
 - **Payments:** Razorpay (`razorpay-java` 1.4.8)
 - **Email:** Spring Mail (Gmail SMTP)
-- **Observability:** Micrometer Tracing, Zipkin, Spring Boot Actuator
+- **Observability:** Micrometer Tracing, Zipkin, Grafana, Loki, Grafana Alloy, structured JSON logging, Spring Boot Actuator
 - **Build:** Maven (wrapper included, no global Maven install needed)
 
 ---
@@ -125,6 +129,7 @@ Redis (`localhost:6379`) is used for caching by the gateway, auth, product, cart
 - Circuit breakers and time limits on inter-service calls
 - Event-driven cleanup: deleting a user or product removes related cart items and comments through Kafka
 - Distributed tracing with Micrometer Tracing and Zipkin, including Kafka messages
+- Centralized JSON logging with Grafana, Loki, and Alloy, with a link from a log line to its Zipkin trace
 - Global exception handlers in every service
 
 ---
@@ -163,13 +168,13 @@ AzCart uses **Micrometer Tracing** (through Spring Boot's `spring-boot-starter-z
 
 - Each traced service has the `spring-boot-starter-zipkin` and `spring-boot-starter-actuator` dependencies in its `pom.xml`.
 - Each traced service has `management.tracing.sampling.probability = 1.0` in its `application.properties`.
-- `authservice`, `product-service`, `order-service`, `cart-service`, and `MailService` also enable Kafka observation (`spring.kafka.template.observation-enabled` and `spring.kafka.listener.observation-enabled`), so trace IDs follow messages through Kafka.
+- `authservice`, `product-service`, `order-service`, `cart-service`, `comment`, and `MailService` also enable Kafka observation (`spring.kafka.template.observation-enabled` and `spring.kafka.listener.observation-enabled`), so trace IDs follow messages through Kafka.
 - No Zipkin URL is configured, because Spring Boot sends spans to `http://localhost:9411/api/v2/spans` by default. To use a different Zipkin address, set `management.zipkin.tracing.endpoint` in each service's `application.properties`.
 - No extra environment variables are needed.
 
 **How to view a trace**
 
-1. Start Zipkin ([Step 8](#step-8-start-zipkin-for-distributed-tracing-docker)) and the services.
+1. Start the observability stack ([Step 8](#step-8-start-the-observability-stack-docker)), which includes Zipkin, and then the services.
 2. Make some requests through the gateway, such as logging in, listing products, or placing an order.
 3. Open **http://localhost:9411**.
 4. In the search bar, choose a **Service Name** (start with `api-gateway`) and click **Run Query**.
@@ -184,6 +189,112 @@ AzCart uses **Micrometer Tracing** (through Spring Boot's `spring-boot-starter-z
 
 ---
 
+## 📜 Centralized Logging (Grafana)
+
+Each service writes its own log file. Opening seven log files to follow one request is slow, so AzCart collects them all in **Grafana**. You can search by service, filter by level (`INFO`, `WARN`, `ERROR`), and jump from a log line straight to its trace in Zipkin.
+
+```
+ Spring Boot services (api-gateway, authservice, product-service, cart-service,
+                       order-service, comment, MailService)
+        │  write JSON logs to  C:/azcart-logs/<service>.log
+        ▼
+ Grafana Alloy :12345   reads the files, adds labels (job, service, level)
+        │  push
+        ▼
+ Grafana Loki :3100     stores the logs
+        │  query
+        ▼
+ Grafana :3000  ── "Open in Zipkin" link on log lines with a trace ID ──►  Zipkin :9411
+```
+
+| Component | Role |
+|---|---|
+| **Grafana Alloy** | Collector that tails the `*.log` files and ships them to Loki |
+| **Grafana Loki** | Log storage and query engine |
+| **Grafana** | Web UI to explore logs (Loki is set up as the default data source) |
+| **Zipkin** | Shows the trace that a log line belongs to |
+
+**How it is configured**
+
+- Every service except the Service Registry has these two lines in `application.properties`:
+
+  ```properties
+  logging.file.name = C:/azcart-logs/${spring.application.name}.log
+  logging.structured.format.file = logstash
+  ```
+
+  The first writes one file per service (for example `authservice.log` or `MailService.log`). The second writes that file as structured **JSON**, so fields such as the level, message, and trace ID can be searched. Console output stays in the normal text format.
+- The services log with SLF4J (`log.info`, `log.warn`, and so on). Trace and span IDs are added to each JSON line by Micrometer Tracing, which is what connects logs to Zipkin.
+- `observability/alloy/config.alloy` reads `/var/log/apps/*.log` (the mounted `C:/azcart-logs` folder) and adds three labels: `job="microservices"`, `service` (taken from the file name), and `level` (taken from the JSON). It then pushes everything to Loki.
+- `observability/grafana/provisioning/datasources/datasources.yml` registers Loki automatically and adds a **TraceID** link. Any log line containing `"traceId":"..."` gets an **Open in Zipkin** button.
+- The Service Registry does not write a log file, so it does not appear in Grafana.
+
+**Labels you can filter by**
+
+| Label | Values |
+|---|---|
+| `job` | `microservices` |
+| `service` | `api-gateway`, `authservice`, `product-service`, `cart-service`, `order-service`, `comment`, `MailService` |
+| `level` | `INFO`, `WARN`, `ERROR`, and so on |
+
+**How to view logs in Grafana**
+
+1. Start the observability stack ([Step 8](#step-8-start-the-observability-stack-docker)) and the services, then send a few requests through the gateway.
+2. Open **http://localhost:3000** and log in with `admin` / `admin`.
+3. In the left menu, open **Explore**.
+4. At the top, make sure the data source is **Loki**.
+5. Choose a label filter such as `service` = `authservice` (or switch to **Code** mode and type a query from the table below).
+6. Set the time range at the top right (for example **Last 15 minutes**) and click **Run query**.
+7. Click a log line to expand its fields. If the line has a trace ID, click **Open in Zipkin** to open that trace.
+
+**Example queries (LogQL)**
+
+| Goal | Query |
+|---|---|
+| All logs from every service | `{job="microservices"}` |
+| One service | `{service="order-service"}` |
+| Errors only | `{job="microservices", level="ERROR"}` |
+| Warnings and errors from the gateway | `{service="api-gateway", level=~"WARN\|ERROR"}` |
+| Search for text | `{job="microservices"} \|= "Unauthorized"` |
+| Every request the gateway received | `{service="api-gateway"} \|= "Request path in API Gateway"` |
+| All logs for one request | `{job="microservices"} \|= "<traceId>"` |
+| Show JSON fields as columns | `{service="authservice"} \| json` |
+
+**A typical debugging flow**
+
+1. In Grafana, find the `ERROR` or `WARN` line (for example `{job="microservices", level="ERROR"}`).
+2. Click **Open in Zipkin** to see which service was slow or failed.
+3. Or do it the other way around: copy a trace ID from Zipkin and search for it in Grafana to see every log line from every service for that request.
+
+#### Using macOS or Linux
+
+The default log path, `C:/azcart-logs`, is a Windows path. On macOS or Linux, point everything at a folder of your choice (these steps have not been tested on those systems, so adjust if needed):
+
+1. Create the folder, for example `mkdir -p ~/azcart-logs`.
+2. In `application.properties` of each logging service (`api-gateway`, `authservice`, `product-service`, `cart-service`, `order-service`, `comment`, `MailService`), change:
+
+   ```properties
+   logging.file.name = ${user.home}/azcart-logs/${spring.application.name}.log
+   ```
+
+3. In `observability/docker-compose.yml`, change the Alloy volume from `C:/azcart-logs:/var/log/apps:ro` to:
+
+   ```yaml
+   - ${HOME}/azcart-logs:/var/log/apps:ro
+   ```
+
+4. Restart the services and the stack.
+
+If you leave the Windows path unchanged on macOS or Linux, each service creates a folder named `C:` in its own working directory and Alloy will not find the logs.
+
+**Notes**
+
+- `admin` / `admin` is Grafana's default login. Keep these tools local, or change the password before exposing them.
+- The compose file uses the `latest` image tags. Pin specific versions if you need a repeatable setup.
+- Logs can contain user IDs and IP addresses. Avoid logging passwords, tokens, or payment details.
+
+---
+
 ## 🚀 Run Locally (Step by Step)
 
 ### Step 1: Install prerequisites
@@ -192,7 +303,7 @@ AzCart uses **Micrometer Tracing** (through Spring Boot's `spring-boot-starter-z
 |---|---|---|
 | JDK | 21 | `java -version` |
 | Git | any | `git --version` |
-| Docker Desktop | any | `docker --version` (required for Kafka and Zipkin; optional for MySQL, MongoDB, Redis) |
+| Docker Desktop | any | `docker --version` (required for Kafka and the observability stack; optional for MySQL, MongoDB, Redis) |
 
 You do **not** need to install Maven; each service includes `mvnw` (Linux/macOS) and `mvnw.cmd` (Windows).
 
@@ -748,67 +859,203 @@ http://localhost:8765/authservice/login/oauth2/code/google
 http://localhost:8765/authservice/login/oauth2/code/amazon
 ```
 
-### Step 8: Start Zipkin for distributed tracing (Docker)
+### Step 8: Start the observability stack (Docker)
 
-Zipkin collects and displays the traces from your services. Start it **before** the services so no spans are lost.
+One Docker Compose file starts everything needed for distributed tracing and centralized logging:
 
-**8.1** Make sure Docker Desktop is running:
+| Container | Port | Purpose |
+|---|---|---|
+| `zipkin` | 9411 | Distributed traces |
+| `loki` | 3100 | Stores the logs |
+| `alloy` | 12345 | Reads the services' log files and sends them to Loki |
+| `grafana` | 3000 | Search and view the logs |
 
-```bash
-docker --version
+Start it **before** the services so no spans or log lines are lost.
+
+**8.1** Create the folder where the services write their log files (Alloy reads from it):
+
+```powershell
+mkdir C:\azcart-logs
 ```
 
-**8.2** Start Zipkin on port `9411`:
+The path comes from `logging.file.name` in each service's `application.properties`. On macOS or Linux, see [Using macOS or Linux](#using-macos-or-linux) in the Centralized Logging section.
 
-```bash
-docker run -d --name zipkin -p 9411:9411 openzipkin/zipkin
+**8.2** Make sure the `observability` folder is in the project root with this layout. If your clone does not have it, create the three files with the contents shown below.
+
+```
+observability/
+├── docker-compose.yml
+├── alloy/
+│   └── config.alloy
+└── grafana/
+    └── provisioning/
+        └── datasources/
+            └── datasources.yml
 ```
 
-The first run downloads the image, which can take a minute. `-d` runs it in the background, and `--name zipkin` lets you stop and start it by name.
+<details>
+<summary><code>observability/docker-compose.yml</code></summary>
 
-> **Prefer a compose file?** Inside the `docker` folder, create `zipkin-compose.yml`:
-> ```yaml
-> services:
->   zipkin:
->     image: openzipkin/zipkin
->     container_name: zipkin
->     ports:
->       - "9411:9411"
-> ```
-> and start it with `docker compose -f docker/zipkin-compose.yml up -d`.
+```yaml
+services:
+  zipkin:
+    image: openzipkin/zipkin
+    container_name: zipkin
+    ports:
+      - "9411:9411"
 
-**8.3** Check that it is running:
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - loki-data:/loki
+
+  alloy:
+    image: grafana/alloy:latest
+    container_name: alloy
+    command: run --server.http.listen-addr=0.0.0.0:12345 --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
+    ports:
+      - "12345:12345"
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - C:/azcart-logs:/var/log/apps:ro
+    depends_on:
+      - loki
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - loki
+
+volumes:
+  loki-data:
+  grafana-data:
+```
+
+</details>
+
+<details>
+<summary><code>observability/alloy/config.alloy</code></summary>
+
+```
+local.file_match "logs" {
+  path_targets = [{ "__path__" = "/var/log/apps/*.log", "job" = "microservices" }]
+}
+
+discovery.relabel "apps" {
+  targets = local.file_match.logs.targets
+
+  rule {
+    source_labels = ["__path__"]
+    regex         = ".*/(.*)\\.log"
+    target_label  = "service"
+  }
+}
+
+loki.source.file "apps" {
+  targets    = discovery.relabel.apps.output
+  forward_to = [loki.process.json.receiver]
+}
+
+loki.process "json" {
+  stage.json {
+    expressions = { level = "level" }
+  }
+
+  stage.labels {
+    values = { level = "level" }
+  }
+
+  forward_to = [loki.write.default.receiver]
+}
+
+loki.write "default" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><code>observability/grafana/provisioning/datasources/datasources.yml</code></summary>
+
+```yaml
+apiVersion: 1
+datasources:
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    isDefault: true
+    jsonData:
+      derivedFields:
+        - name: TraceID
+          matcherRegex: '"traceId":"(\w+)"'
+          url: 'http://localhost:9411/zipkin/traces/$${__value.raw}'
+          urlDisplayLabel: Open in Zipkin
+```
+
+</details>
+
+**8.3** If you started a standalone Zipkin container earlier (for example with `docker run --name zipkin ...`), remove it, because the compose file also creates a container named `zipkin`:
+
+```bash
+docker rm -f zipkin
+```
+
+**8.4** Start the stack from the project root:
+
+```bash
+docker compose -f observability/docker-compose.yml up -d
+```
+
+The first run downloads the images, which can take a few minutes.
+
+**8.5** Check that all four containers are running:
 
 ```bash
 docker ps
 ```
 
-You should see a `zipkin` container with `0.0.0.0:9411->9411/tcp`.
+You should see `zipkin`, `loki`, `alloy`, and `grafana` with status `Up`. Then open:
 
-**8.4** Open the UI at **http://localhost:9411**. It will be empty until the services handle some requests. You can also check its health:
-
-```bash
-curl http://localhost:9411/health
-```
+| What | URL | Notes |
+|---|---|---|
+| Zipkin | http://localhost:9411 | Empty until the services handle requests |
+| Grafana | http://localhost:3000 | Log in with `admin` / `admin` (Grafana may ask you to change the password; you can skip it locally) |
+| Loki | http://localhost:3100/ready | Shows `ready` when Loki is up; it may take a few seconds after start |
+| Alloy | http://localhost:12345 | Alloy's own status page |
 
 **Useful commands**
 
 | Task | Command |
 |---|---|
-| Stop Zipkin | `docker stop zipkin` |
-| Start it again | `docker start zipkin` |
-| Remove it | `docker rm -f zipkin` |
-| View its logs | `docker logs -f zipkin` |
+| Stop the stack (keep data) | `docker compose -f observability/docker-compose.yml stop` |
+| Start it again | `docker compose -f observability/docker-compose.yml start` |
+| Remove containers (keep Loki and Grafana data) | `docker compose -f observability/docker-compose.yml down` |
+| Remove containers **and delete Loki and Grafana data** | `docker compose -f observability/docker-compose.yml down -v` |
+| View a container's logs | `docker logs -f alloy` (or `loki`, `grafana`, `zipkin`) |
 
-Zipkin keeps traces in memory, so stopping and starting the container clears them.
+Zipkin keeps traces in memory, so they are cleared whenever its container restarts. Loki and Grafana keep their data in Docker volumes.
 
-If port `9411` is already in use, map another host port (for example `-p 9412:9411`) and set `management.zipkin.tracing.endpoint=http://localhost:9412/api/v2/spans` in each service's `application.properties`.
+If one of the ports is already in use, change the **left** number of that port mapping in `observability/docker-compose.yml` (for example `"3001:3000"`). If you change the Zipkin port, also update `management.zipkin.tracing.endpoint` in each service and the Zipkin link in `datasources.yml`.
 
 ---
 
 ### Step 9: Start the services in order
 
-Make sure Kafka, the databases, and Zipkin (Step 8) are already running.
+Make sure Kafka, the databases, and the observability stack (Step 8) are already running.
 
 Open **one terminal per service** (with the environment variables set), from the project root.
 
@@ -845,6 +1092,7 @@ The first start of each service downloads dependencies, so it takes a few minute
 1. Open the Eureka dashboard: **http://localhost:8761**. You should see `API-GATEWAY`, `AUTHSERVICE`, `PRODUCT-SERVICE`, `CART-SERVICE`, `ORDER-SERVICE`, `COMMENT`, and `MAILSERVICE` listed as **UP**.
 2. Check the auth service health through the gateway is reachable by registering a user (Step 11).
 3. After you send a few requests, open the Zipkin UI at **http://localhost:9411**, choose `api-gateway` as the service name, and click **Run Query** to see the traces (details in [Distributed Tracing](#-distributed-tracing-zipkin)).
+4. Open Grafana at **http://localhost:3000** (`admin` / `admin`), go to **Explore**, choose **Loki**, and run `{job="microservices"}`. You should see log lines from your running services (details in [Centralized Logging](#-centralized-logging-grafana)).
 
 ### Step 11: Try it out
 
@@ -894,6 +1142,16 @@ curl -X POST http://localhost:8765/product-service/api/admin/addproduct \
 
 After the login and product requests above, open **http://localhost:9411**, select `api-gateway` under **Service Name**, and click **Run Query**. Open the newest trace to see the request pass through the gateway and the service that handled it, with the time spent in each.
 
+**See the logs in Grafana**
+
+Open **http://localhost:3000**, go to **Explore**, choose **Loki**, and run:
+
+```
+{service="api-gateway"} |= "Request path in API Gateway"
+```
+
+You will see a log line for each request that reached the gateway. Expand a line that has a trace ID and click **Open in Zipkin** to jump to its trace.
+
 ### Step 12 (optional): Run the frontend
 
 Start the React frontend separately on `http://localhost:5173`. The gateway's CORS rules and the OAuth2 success redirect are configured for this exact origin.
@@ -904,7 +1162,7 @@ Press `Ctrl + C` in each service terminal, then stop the containers:
 
 ```bash
 docker compose -f docker/kafka-compose.yml stop
-docker stop zipkin
+docker compose -f observability/docker-compose.yml stop
 docker compose -f docker/db-compose.yml stop      # only if you used Docker for the databases (Option B)
 ```
 
@@ -1016,7 +1274,13 @@ Base URL: `http://localhost:8765`. Paths below include the service prefix used b
 | No traces appear in Zipkin | Zipkin is not running on `9411`, or no request has been sent yet. Check `docker ps`, send a request through the gateway (`:8765`), then click **Run Query**. Traces can take a few seconds to show up. |
 | Logs show errors sending spans to `localhost:9411` | Zipkin is not running or the port is blocked. Start it (Step 8). The services still work; only tracing is affected. |
 | A trace shows only some services | Check that the service has `spring-boot-starter-zipkin` in its `pom.xml` and `management.tracing.sampling.probability = 1.0` in `application.properties`, then rebuild and restart it. The Service Registry is not traced. |
-| Port `9411` is already in use | Map another host port (for example `-p 9412:9411`) and set `management.zipkin.tracing.endpoint` in each service (see Step 8). |
+| Ports `3000`, `3100`, `9411`, or `12345` are already in use | Change the left number of that port mapping in `observability/docker-compose.yml` (for example `"3001:3000"`). If you change the Zipkin port, also update `management.zipkin.tracing.endpoint` in each service and the Zipkin link in `datasources.yml`. |
+| `Conflict. The container name "/zipkin" is already in use` | A standalone Zipkin container from an earlier run still exists. Remove it with `docker rm -f zipkin`, then start the stack again (Step 8). |
+| No logs in Grafana | Check that the services are running and `C:\azcart-logs` contains `<service>.log` files, that the `alloy` container is running (`docker logs alloy`), that the time range in Grafana is wide enough (try **Last 1 hour**), and that the Alloy volume path in `observability/docker-compose.yml` matches `logging.file.name`. |
+| `C:\azcart-logs` stays empty | Each service needs `logging.file.name` and `logging.structured.format.file` in its `application.properties`. Rebuild and restart the service. The Service Registry does not write a log file. |
+| Logs appear but filtering by `level` returns nothing | The logs must be JSON. Check that `logging.structured.format.file = logstash` is set, then restart the service. |
+| No **Open in Zipkin** button on a log line | Only lines that contain a trace ID get the link. Send the request through the gateway, and make sure Zipkin is running on port `9411`. |
+| Cannot log in to Grafana | The default login is `admin` / `admin`. If you changed the password and forgot it, `docker compose -f observability/docker-compose.yml down -v` resets Grafana, but it also deletes the saved Grafana and Loki data. |
 | `401 Unauthorized` from the gateway | Missing or expired token, or `JWT_SECRET` differs between services. |
 | `Port already in use` | Another process uses that port. Stop it or change `server.port` in that service. |
 | No emails arrive, or `Authentication failed` / `535` errors from Gmail | Use a Gmail **App Password** (2-Step Verification must be on), not your normal password, and check `EMAIL` / `EMAIL_PASSWORD` (Step 5.4). |
@@ -1041,7 +1305,8 @@ E-commerce-backend-microservices/
 ├── order-service/        # Orders, Razorpay (8100)
 ├── comment/              # Comments, MongoDB (8060)
 ├── MailService/          # Kafka consumer, email sender (8050)
-├── docker/               # kafka-compose.yml, db-compose.yml, zipkin-compose.yml (local setup files you create)
+├── docker/               # kafka-compose.yml, db-compose.yml (local setup files you create)
+├── observability/        # Zipkin, Loki, Alloy, Grafana (docker-compose.yml, alloy/, grafana/)
 └── README.md
 ```
 
@@ -1055,6 +1320,7 @@ Each service follows the same layout: `controller`, `service`, `repository`, `mo
 - **Event-driven cleanup:** deleting a user or product publishes a Kafka event, and the cart and comment services clean up their own data.
 - **Caching done carefully:** cache logic lives in separate `*CacheService` classes so Spring's `@Cacheable` / `@CacheEvict` proxies are not bypassed by self-invocation.
 - **Observability:** Micrometer Tracing sends spans from the gateway, services, and Kafka consumers/producers to Zipkin, so one request can be followed end to end.
+- **Centralized logging:** services write structured JSON logs, Grafana Alloy ships them to Loki, and Grafana lets you search by service and level and jump from a log line to its Zipkin trace.
 - **Resilience:** Resilience4j circuit breakers and time limiters protect service-to-service and mail calls.
 - **Kafka error handling:** consumers use `ErrorHandlingDeserializer`, retry failed messages 3 times with a 3-second backoff, and then publish them to a dead-letter topic so one bad message does not block the topic.
 - **Separate user and admin flows:** distinct entities, endpoints, OTP flows, and OAuth provider tables for users and admins.
@@ -1068,7 +1334,7 @@ Each service follows the same layout: `controller`, `service`, `repository`, `mo
 - [ ] CI/CD with GitHub Actions
 - [ ] Unit and integration tests
 - [ ] Centralized configuration (Spring Cloud Config)
-- [ ] Metrics and centralized log monitoring
+- [ ] Metrics collection, dashboards, and alerts in Grafana
 - [ ] Swagger / OpenAPI documentation
 
 ---
